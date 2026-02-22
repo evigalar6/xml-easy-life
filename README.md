@@ -9,6 +9,10 @@ XML Easy Life is a lightweight Chrome extension workbench for interview prep and
 - Validate XML well-formedness
 - Format XML for readability
 - Run XPath queries and inspect matching results
+- Code-area style XML input with line numbers
+- Parser-aware error navigation (`Prev Error` / `Next Error`) with line+column jump
+- Visible custom scrollbars for editor and results panels
+- Button interaction states (pressed/processing/disabled)
 - Calm, modern UI with light and dark mode
 
 ## Project structure
@@ -43,4 +47,5 @@ XML Easy Life is a lightweight Chrome extension workbench for interview prep and
 ## Notes
 
 - This MVP validates XML well-formedness via browser parser.
+- Parser error detail depends on browser-provided `parsererror` output (often first error only).
 - XSD schema validation and XSLT transform preview can be added next.

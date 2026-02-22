@@ -115,6 +115,16 @@ h2 {
   margin-bottom: 6px;
 }
 
+.error-nav-row {
+  margin-top: -2px;
+}
+
+.error-nav-info {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
 .file-input {
   position: relative;
 }
@@ -210,7 +220,37 @@ textarea {
   min-height: 360px;
   resize: vertical;
   overflow: auto;
+  line-height: 1.45;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.editor-shell {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr);
+  border: 1px solid var(--outline);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--surface) 88%, #ffffff);
+  overflow: hidden;
+}
+
+.line-numbers {
+  margin: 0;
+  padding: 12px 10px 12px 0;
+  text-align: right;
+  color: color-mix(in srgb, var(--muted) 88%, var(--text));
+  background: color-mix(in srgb, var(--surface) 70%, #9cb9bf);
+  border-right: 1px solid var(--outline);
+  user-select: none;
+  min-height: 360px;
+  overflow: hidden;
+  line-height: 1.45;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.editor-shell textarea {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
 }
 
 label {
@@ -238,18 +278,21 @@ textarea {
 }
 
 textarea::-webkit-scrollbar,
+.line-numbers::-webkit-scrollbar,
 .results::-webkit-scrollbar {
   width: 12px;
   height: 12px;
 }
 
 textarea::-webkit-scrollbar-track,
+.line-numbers::-webkit-scrollbar-track,
 .results::-webkit-scrollbar-track {
   background: var(--scroll-track);
   border-radius: 999px;
 }
 
 textarea::-webkit-scrollbar-thumb,
+.line-numbers::-webkit-scrollbar-thumb,
 .results::-webkit-scrollbar-thumb {
   background: var(--scroll-thumb);
   border-radius: 999px;
@@ -257,6 +300,7 @@ textarea::-webkit-scrollbar-thumb,
 }
 
 textarea::-webkit-scrollbar-thumb:hover,
+.line-numbers::-webkit-scrollbar-thumb:hover,
 .results::-webkit-scrollbar-thumb:hover {
   background: var(--scroll-thumb-hover);
 }
@@ -281,6 +325,10 @@ textarea::-webkit-scrollbar-thumb:hover,
   }
 
   textarea {
+    min-height: 280px;
+  }
+
+  .line-numbers {
     min-height: 280px;
   }
 }

@@ -1,4 +1,5 @@
 const xmlInput = document.getElementById("xmlInput");
+const lineNumbers = document.getElementById("lineNumbers");
 const xpathInput = document.getElementById("xpathInput");
 const results = document.getElementById("results");
 const meta = document.getElementById("meta");
@@ -9,6 +10,12 @@ const loadSampleBtn = document.getElementById("loadSample");
 const formatBtn = document.getElementById("formatBtn");
 const validateBtn = document.getElementById("validateBtn");
 const runXpathBtn = document.getElementById("runXpath");
+const prevErrorBtn = document.getElementById("prevErrorBtn");
+const nextErrorBtn = document.getElementById("nextErrorBtn");
+const errorNavInfo = document.getElementById("errorNavInfo");
+
+let parserErrors = [];
+let activeParserErrorIndex = -1;
 
 const SAMPLE_XML = `<?xml version="1.0" encoding="UTF-8"?>
 <catalog>
@@ -31,14 +38,93 @@ function setMeta(message, kind = "") {
   meta.className = `meta ${kind}`.trim();
 }
 
+function updateLineNumbers() {
+  const totalLines = Math.max(1, xmlInput.value.split("\n").length);
+  lineNumbers.textContent = Array.from({ length: totalLines }, (_, i) => String(i + 1)).join("\n");
+}
+
+function syncLineNumberScroll() {
+  lineNumbers.scrollTop = xmlInput.scrollTop;
+}
+
+function extractParserIssues(errorText) {
+  const issues = [];
+  const regex = /error on line\s+(\d+)\s+at column\s+(\d+)/gi;
+  let match = regex.exec(errorText);
+  while (match) {
+    issues.push({
+      line: Number(match[1]),
+      column: Number(match[2]),
+      message: `Line ${match[1]}, column ${match[2]}`
+    });
+    match = regex.exec(errorText);
+  }
+  return issues;
+}
+
+function updateErrorNavigation() {
+  const hasErrors = parserErrors.length > 0;
+  prevErrorBtn.disabled = !hasErrors;
+  nextErrorBtn.disabled = !hasErrors;
+  if (!hasErrors) {
+    errorNavInfo.textContent = "No errors";
+    return;
+  }
+  errorNavInfo.textContent = `Error ${activeParserErrorIndex + 1} of ${parserErrors.length} (${parserErrors[activeParserErrorIndex].message})`;
+}
+
+function setParserErrors(issues) {
+  parserErrors = issues;
+  activeParserErrorIndex = issues.length > 0 ? 0 : -1;
+  updateErrorNavigation();
+}
+
+function getOffsetForLineColumn(text, line, column) {
+  if (line <= 1 && column <= 1) return 0;
+  const lines = text.split("\n");
+  let offset = 0;
+  for (let i = 0; i < lines.length; i += 1) {
+    const lineNumber = i + 1;
+    if (lineNumber === line) {
+      return offset + Math.max(0, Math.min(lines[i].length, column - 1));
+    }
+    offset += lines[i].length + 1;
+  }
+  return text.length;
+}
+
+function jumpToParserError(index) {
+  if (index < 0 || index >= parserErrors.length) {
+    return;
+  }
+  activeParserErrorIndex = index;
+  const issue = parserErrors[index];
+  const offset = getOffsetForLineColumn(xmlInput.value, issue.line, issue.column);
+  xmlInput.focus();
+  xmlInput.setSelectionRange(offset, offset);
+  const totalLines = xmlInput.value.split("\n");
+  const avgLineHeight = 22;
+  const targetTop = Math.max(0, (issue.line - 2) * avgLineHeight);
+  if (totalLines.length > 1) {
+    xmlInput.scrollTop = targetTop;
+    syncLineNumberScroll();
+  }
+  updateErrorNavigation();
+}
+
 function parseXml(xmlText) {
   const parser = new DOMParser();
   const doc = parser.parseFromString(xmlText, "application/xml");
   const errorNode = doc.querySelector("parsererror");
   if (errorNode) {
-    return { ok: false, error: errorNode.textContent.trim() };
+    const errorText = errorNode.textContent.trim();
+    return {
+      ok: false,
+      error: errorText,
+      issues: extractParserIssues(errorText)
+    };
   }
-  return { ok: true, doc };
+  return { ok: true, doc, issues: [] };
 }
 
 function formatXml(xml) {
@@ -98,9 +184,14 @@ function evaluateXpath() {
 
   const parsed = parseXml(xmlText);
   if (!parsed.ok) {
+    setParserErrors(parsed.issues);
     setMeta(`Invalid XML: ${parsed.error}`, "error");
+    if (parsed.issues.length > 0) {
+      jumpToParserError(0);
+    }
     return;
   }
+  setParserErrors([]);
 
   try {
     const iterator = parsed.doc.evaluate(expr, parsed.doc, null, XPathResult.ANY_TYPE, null);
@@ -169,6 +260,9 @@ loadSampleBtn.addEventListener("click", async () => {
     loadSampleBtn,
     async () => {
       xmlInput.value = formatXml(SAMPLE_XML);
+      updateLineNumbers();
+      syncLineNumberScroll();
+      setParserErrors([]);
       results.textContent = "Sample loaded.";
       setMeta("Sample XML loaded.", "ok");
     },
@@ -188,11 +282,18 @@ formatBtn.addEventListener("click", async () => {
 
       const parsed = parseXml(xmlText);
       if (!parsed.ok) {
+        setParserErrors(parsed.issues);
         setMeta(`Invalid XML: ${parsed.error}`, "error");
+        if (parsed.issues.length > 0) {
+          jumpToParserError(0);
+        }
         return;
       }
 
       xmlInput.value = formatXml(documentToString(parsed.doc));
+      updateLineNumbers();
+      syncLineNumberScroll();
+      setParserErrors([]);
       setMeta("XML formatted successfully.", "ok");
     },
     "Formatting..."
@@ -211,10 +312,15 @@ validateBtn.addEventListener("click", async () => {
 
       const parsed = parseXml(xmlText);
       if (!parsed.ok) {
+        setParserErrors(parsed.issues);
         setMeta(`Invalid XML: ${parsed.error}`, "error");
+        if (parsed.issues.length > 0) {
+          jumpToParserError(0);
+        }
         return;
       }
 
+      setParserErrors([]);
       setMeta("XML is well-formed.", "ok");
     },
     "Checking..."
@@ -224,7 +330,7 @@ validateBtn.addEventListener("click", async () => {
 runXpathBtn.addEventListener("click", async () => {
   await withButtonProcessing(runXpathBtn, async () => {
     evaluateXpath();
-  });
+  }, "Running...");
 });
 
 fileInput.addEventListener("change", () => {
@@ -235,6 +341,9 @@ fileInput.addEventListener("change", () => {
   reader.onload = () => {
     const text = String(reader.result || "");
     xmlInput.value = text;
+    updateLineNumbers();
+    syncLineNumberScroll();
+    setParserErrors([]);
     setMeta(`Loaded file: ${file.name}`, "ok");
     results.textContent = "File loaded. Run Validate or XPath.";
   };
@@ -242,6 +351,26 @@ fileInput.addEventListener("change", () => {
     setMeta("Could not read selected file.", "error");
   };
   reader.readAsText(file);
+});
+
+xmlInput.addEventListener("input", () => {
+  updateLineNumbers();
+  // Input changed, older parser issues may no longer match current content.
+  setParserErrors([]);
+});
+
+xmlInput.addEventListener("scroll", syncLineNumberScroll);
+
+prevErrorBtn.addEventListener("click", () => {
+  if (parserErrors.length === 0) return;
+  const next = (activeParserErrorIndex - 1 + parserErrors.length) % parserErrors.length;
+  jumpToParserError(next);
+});
+
+nextErrorBtn.addEventListener("click", () => {
+  if (parserErrors.length === 0) return;
+  const next = (activeParserErrorIndex + 1) % parserErrors.length;
+  jumpToParserError(next);
 });
 
 async function loadPendingXml() {
@@ -259,6 +388,9 @@ async function loadPendingXml() {
   }
 
   xmlInput.value = payload.xml;
+  updateLineNumbers();
+  syncLineNumberScroll();
+  setParserErrors([]);
   setMeta(`Loaded XML from tab: ${payload.source}`, "ok");
   results.textContent = `Loaded ${payload.loadedAt}.`;
 
@@ -268,3 +400,7 @@ async function loadPendingXml() {
 loadPendingXml().catch((error) => {
   setMeta(`Failed to load startup data: ${error.message}`, "error");
 });
+
+updateLineNumbers();
+syncLineNumberScroll();
+updateErrorNavigation();
