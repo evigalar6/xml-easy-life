@@ -122,6 +122,7 @@ h2 {
 .xpath-gen-row {
   margin-top: -2px;
   margin-bottom: 10px;
+  gap: 10px;
 }
 
 .error-nav-row {
@@ -244,6 +245,7 @@ textarea {
   background: color-mix(in srgb, var(--surface) 88%, #ffffff);
   overflow: hidden;
   margin-bottom: 8px;
+  height: min(60vh, 460px);
 }
 
 .line-numbers {
@@ -254,7 +256,7 @@ textarea {
   background: color-mix(in srgb, var(--surface) 70%, #9cb9bf);
   border-right: 1px solid var(--outline);
   user-select: none;
-  min-height: 360px;
+  height: 100%;
   overflow: hidden;
   line-height: 1.45;
   font-size: 14px;
@@ -267,6 +269,9 @@ textarea {
   background: transparent;
   white-space: pre;
   overflow-wrap: normal;
+  height: 100%;
+  min-height: 0;
+  resize: none;
 }
 
 .editor-shell textarea.error-focus {
@@ -298,6 +303,59 @@ label {
   border-radius: 12px;
   padding: 10px;
   background: color-mix(in srgb, var(--surface) 86%, #ffffff);
+}
+
+.tooltip-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  border: 1px solid var(--outline);
+  background: color-mix(in srgb, var(--surface) 70%, var(--primary));
+  color: var(--text);
+  cursor: help;
+  outline: none;
+}
+
+.tooltip-wrap:focus-visible {
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary) 48%, transparent);
+}
+
+.info-icon {
+  font-weight: 800;
+  font-size: 14px;
+  line-height: 1;
+  user-select: none;
+}
+
+.tooltip-box {
+  position: absolute;
+  left: 0;
+  top: calc(100% + 8px);
+  width: min(340px, 72vw);
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--outline);
+  background: color-mix(in srgb, var(--surface) 92%, #ffffff);
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1.45;
+  box-shadow: var(--shadow);
+  opacity: 0;
+  transform: translateY(-4px);
+  pointer-events: none;
+  transition: opacity 120ms ease, transform 120ms ease;
+  z-index: 20;
+}
+
+.tooltip-wrap:hover .tooltip-box,
+.tooltip-wrap:focus-within .tooltip-box,
+.tooltip-wrap:focus .tooltip-box {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 .suggestions-title {
@@ -391,13 +449,15 @@ textarea::-webkit-scrollbar-thumb:hover,
   }
 
   textarea {
-    min-height: 280px;
     font-size: 13px;
   }
 
   .line-numbers {
-    min-height: 280px;
     font-size: 13px;
+  }
+
+  .editor-shell {
+    height: min(52vh, 360px);
   }
 }
 

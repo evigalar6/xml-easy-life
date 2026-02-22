@@ -52,6 +52,21 @@
         <button id="runXpath" class="button-row-single">Run XPath</button>
         <div class="row button-row xpath-gen-row">
           <button id="generateXpathBtn" class="ghost">Generate XPath From Cursor</button>
+          <div class="tooltip-wrap" tabindex="0" aria-label="How XPath generation works">
+            <span class="info-icon">i</span>
+            <div class="tooltip-box" role="note">
+              XPath generation uses:
+              <br />1. Well-formed XML
+              <br />2. Current cursor position
+              <br />3. Open tag stack before the cursor
+              <br /><br />If your cursor is on indentation/whitespace inside an element, it usually still resolves correctly.
+              <br /><br />Ambiguity can happen:
+              <br />- between sibling elements
+              <br />- before root / after document end
+              <br />- when XML is invalid
+              <br /><br />In ambiguous cases, the generator may fall back to a nearby/root element.
+            </div>
+          </div>
         </div>
         <div id="xpathSuggestions" class="xpath-suggestions" hidden>
           <p class="suggestions-title">Suggestions</p>
