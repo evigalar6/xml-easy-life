@@ -104,8 +104,41 @@ h1 {
   box-shadow: var(--shadow);
 }
 
+.tabs-panel {
+  display: flex;
+  flex-direction: column;
+}
+
 h2 {
   margin-top: 0;
+}
+
+.tab-subtitle {
+  margin: -4px 0 12px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.tabs-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.tab-btn {
+  min-height: 38px;
+  padding: 8px 14px;
+}
+
+.tab-btn[aria-selected="true"] {
+  background: linear-gradient(140deg, var(--primary), var(--primary-2));
+  color: #fff;
+  border: 0;
+}
+
+.tab-panel {
+  min-height: 0;
 }
 
 .row {
@@ -334,6 +367,10 @@ label {
   scrollbar-color: var(--scroll-thumb) var(--scroll-track);
 }
 
+.inspector-results {
+  height: 240px;
+}
+
 .xslt-output {
   height: 200px;
 }
@@ -368,18 +405,6 @@ label {
   border-radius: 12px;
   padding: 10px;
   background: color-mix(in srgb, var(--surface) 86%, #ffffff);
-}
-
-.xsd-box,
-.xslt-box {
-  margin-top: 16px;
-  border-top: 1px solid var(--outline);
-  padding-top: 12px;
-}
-
-.xsd-box h3,
-.xslt-box h3 {
-  margin: 0 0 10px;
 }
 
 .tooltip-wrap {

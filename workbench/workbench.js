@@ -28,6 +28,8 @@ const loadRecentBtn = document.getElementById("loadRecentBtn");
 const formatBtn = document.getElementById("formatBtn");
 const validateBtn = document.getElementById("validateBtn");
 const runXpathBtn = document.getElementById("runXpath");
+const inspectorSummary = document.getElementById("inspectorSummary");
+const refreshInspectorBtn = document.getElementById("refreshInspectorBtn");
 const generateXpathBtn = document.getElementById("generateXpathBtn");
 const xpathSuggestions = document.getElementById("xpathSuggestions");
 const xpathSuggestionsList = document.getElementById("xpathSuggestionsList");
@@ -36,6 +38,14 @@ const jumpErrorBtn = document.getElementById("jumpErrorBtn");
 const prevErrorBtn = document.getElementById("prevErrorBtn");
 const nextErrorBtn = document.getElementById("nextErrorBtn");
 const errorNavInfo = document.getElementById("errorNavInfo");
+const tabInspectorBtn = document.getElementById("tabInspector");
+const tabXpathBtn = document.getElementById("tabXpath");
+const tabXsdBtn = document.getElementById("tabXsd");
+const tabXsltBtn = document.getElementById("tabXslt");
+const tabPanelInspector = document.getElementById("tabPanelInspector");
+const tabPanelXpath = document.getElementById("tabPanelXpath");
+const tabPanelXsd = document.getElementById("tabPanelXsd");
+const tabPanelXslt = document.getElementById("tabPanelXslt");
 
 const utils = window.XmlEasyShared || {};
 const {
@@ -48,6 +58,7 @@ const {
 } = utils;
 
 const RECENT_KEY = "recentXmlItems";
+const ACTIVE_TAB_KEY = "activeWorkbenchTab";
 const MAX_RECENT_ITEMS = 8;
 
 let parserErrors = [];
@@ -124,6 +135,65 @@ function setResultsContent(text, showCopy = false) {
 function setXsltOutputContent(text, showCopy = false) {
   xsltOutput.textContent = text;
   copyXsltOutputBtn.hidden = !showCopy;
+}
+
+function getTabConfig() {
+  return {
+    inspector: { button: tabInspectorBtn, panel: tabPanelInspector },
+    xpath: { button: tabXpathBtn, panel: tabPanelXpath },
+    xsd: { button: tabXsdBtn, panel: tabPanelXsd },
+    xslt: { button: tabXsltBtn, panel: tabPanelXslt }
+  };
+}
+
+async function setActiveTab(tabKey) {
+  const config = getTabConfig();
+  const chosen = config[tabKey] ? tabKey : "inspector";
+  for (const [key, entry] of Object.entries(config)) {
+    const isActive = key === chosen;
+    entry.button.setAttribute("aria-selected", String(isActive));
+    entry.panel.hidden = !isActive;
+  }
+  await chrome.storage.local.set({ [ACTIVE_TAB_KEY]: chosen });
+}
+
+function buildInspectorSummary() {
+  const xmlText = xmlInput.value;
+  if (!xmlText.trim()) {
+    return "No XML loaded yet.";
+  }
+
+  const parsed = parseXml(xmlText);
+  if (!parsed.ok) {
+    return `XML status: invalid\\n${parsed.error}`;
+  }
+
+  const doc = parsed.doc;
+  const rootEl = doc.documentElement;
+  const elementCount = doc.getElementsByTagName("*").length;
+  const lineCount = xmlText.split("\\n").length;
+  const byteLength = new TextEncoder().encode(xmlText).length;
+  const namespaces = extractNamespacesFromRoot ? extractNamespacesFromRoot(doc) : {};
+  const namespaceLines = Object.keys(namespaces).length
+    ? Object.entries(namespaces)
+        .map(([prefix, uri]) => `${prefix || "(default)"} = ${uri}`)
+        .join("\\n")
+    : "None detected on root.";
+
+  return [
+    `XML status: valid`,
+    `Root element: <${rootEl.tagName}>`,
+    `Element count: ${elementCount}`,
+    `Line count: ${lineCount}`,
+    `Approx. bytes: ${byteLength}`,
+    ``,
+    `Namespaces:`,
+    namespaceLines
+  ].join("\\n");
+}
+
+function refreshInspectorSummary() {
+  inspectorSummary.textContent = buildInspectorSummary();
 }
 
 function updateLineNumbers() {
@@ -518,6 +588,7 @@ function setXmlContent(xmlText) {
   clearXpathSuggestions();
   resetFormatToggle();
   setParserErrors([]);
+  refreshInspectorSummary();
 }
 
 async function getRecentItems() {
@@ -645,6 +716,27 @@ themeToggleBtn.addEventListener("click", () => {
   setTheme(current === "dark" ? "light" : "dark");
 });
 
+tabInspectorBtn.addEventListener("click", () => {
+  setActiveTab("inspector");
+});
+
+tabXpathBtn.addEventListener("click", () => {
+  setActiveTab("xpath");
+});
+
+tabXsdBtn.addEventListener("click", () => {
+  setActiveTab("xsd");
+});
+
+tabXsltBtn.addEventListener("click", () => {
+  setActiveTab("xslt");
+});
+
+refreshInspectorBtn.addEventListener("click", () => {
+  refreshInspectorSummary();
+  setMeta("Inspector refreshed.", "ok");
+});
+
 helpBtn.addEventListener("click", openHelpModal);
 closeHelpBtn.addEventListener("click", closeHelpModal);
 helpBackdrop.addEventListener("click", closeHelpModal);
@@ -691,6 +783,7 @@ formatBtn.addEventListener("click", async () => {
         xmlInput.value = originalXmlSnapshot;
         updateLineNumbers();
         syncLineNumberScroll();
+        refreshInspectorSummary();
         resetFormatToggle();
         setMeta("Original XML restored.", "ok");
         return;
@@ -713,6 +806,7 @@ formatBtn.addEventListener("click", async () => {
       xmlInput.value = formatXml(documentToString(parsed.doc));
       updateLineNumbers();
       syncLineNumberScroll();
+      refreshInspectorSummary();
       clearXpathSuggestions();
       setFormatToggleActive();
       setParserErrors([]);
@@ -922,6 +1016,7 @@ xsltFileInput.addEventListener("change", () => {
 
 xmlInput.addEventListener("input", () => {
   updateLineNumbers();
+  refreshInspectorSummary();
   clearXpathSuggestions();
   resetFormatToggle();
   setParserErrors([]);
@@ -969,7 +1064,7 @@ copyXsltOutputBtn.addEventListener("click", async () => {
 });
 
 async function loadPendingXml() {
-  const store = await chrome.storage.local.get(["pendingXmlPayload", "themePreference", RECENT_KEY]);
+  const store = await chrome.storage.local.get(["pendingXmlPayload", "themePreference", RECENT_KEY, ACTIVE_TAB_KEY]);
 
   if (store.themePreference) {
     setTheme(store.themePreference);
@@ -979,6 +1074,7 @@ async function loadPendingXml() {
 
   recentItems = Array.isArray(store[RECENT_KEY]) ? store[RECENT_KEY] : [];
   refreshRecentSelect();
+  await setActiveTab(store[ACTIVE_TAB_KEY] || "inspector");
 
   if (store.pendingXmlPayload?.xml) {
     setXmlContent(store.pendingXmlPayload.xml);
@@ -999,8 +1095,10 @@ if (!xsltInput.value.trim()) {
 
 updateLineNumbers();
 syncLineNumberScroll();
+refreshInspectorSummary();
 clearXpathSuggestions();
 resetFormatToggle();
 setResultsContent(results.textContent || "No query yet.", false);
 setXsltOutputContent(xsltOutput.textContent || "No transform yet.", false);
 updateErrorNavigation();
+setActiveTab("inspector");
