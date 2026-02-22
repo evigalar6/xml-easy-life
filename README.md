@@ -1,137 +1,123 @@
 # XML Easy Life
 
-XML Easy Life is a Chrome extension workbench for XML-heavy workflows: inspect data, validate structure, evaluate XPath, generate selectors, and preview XSLT output quickly.
-
+XML Easy Life is a Chrome extension for practical XML workflows: inspect and validate XML, generate and run XPath (including namespace-aware SOAP cases), run lightweight XSD checks, and preview/download XSLT transform output.
 
 ## Feature Overview
 
-### Tabbed workflow
-- `Inspector`: formatting toggle, well-formedness validation, error navigation, XML summary (`Re-scan XML`)
-- `XPath`: namespace mappings, namespace detection, XPath generator, XPath matcher, result copy
-- `XSD`: upload XSD + run lightweight structural checks
-- `XSLT`: upload/paste stylesheet, run JS-based transform, copy output
+### Tabs
+- `Inspector`
+  - Reversible formatting toggle: `Format XML` <-> `Show Original XML`
+  - Well-formedness validation
+  - Parser error navigation (`Jump To Error`, `Prev Error`, `Next Error`)
+  - `Re-scan XML` summary (status, root, counts, namespaces)
+- `XPath`
+  - Manual namespace map (`prefix=uri`)
+  - `Detect Namespaces From XML`
+  - Cursor-based XPath suggestion generator (`Use` / `Copy`)
+  - XPath matcher with scrollable results and copy button
+- `XSD`
+  - Upload XSD and run lightweight structural validation
+- `XSLT`
+  - Upload/paste stylesheet
+  - Run JS-based XSLT-lite transform
+  - Copy output
+  - Download output (`.xml` when output looks like XML, otherwise `.txt`)
 
-### XML input and navigation
-- Upload local `.xml` files
-- Load XML directly from current active tab
-- Load from recent XML history (stored in `chrome.storage.local`)
-- Internal scrollable editor viewport with synced line numbers
-- Reversible formatting toggle:
-  - `Format XML`
-  - `Show Original XML`
+### XML Input Workflow
+- Upload local XML files
+- Load XML from current browser tab
+- Load from recent XML history (`chrome.storage.local`)
+- Scrollable editor with synced line numbers
+- Explicit editor/result scrollbars
 
-### XPath tooling
-- Evaluate XPath against current XML
-- Namespace-aware XPath evaluation with custom prefix mappings
-- Auto-detect namespace prefixes from XML root (`xmlns:...`)
-- Cursor-based XPath generator (`Use` / `Copy` actions)
-- Result panel with fixed scrollable viewport and one-click copy
-
-### XPath suggestion types
-- `Absolute • Fragile`
-  - Example: `/CATALOG[1]/CD[1]/COUNTRY[1]`
-  - Exact indexed path from root
-  - Precise but sensitive to structural changes
-- `By tag • Broad`
-  - Example: `//COUNTRY`
-  - Fast exploration, often many matches
-- `By attribute • Stable`
-  - Example: `//CD[@id='cd-101']`
-  - Usually best when attribute is unique
-- `By text • Medium`
-  - Example: `//COUNTRY[text()='USA']`
-  - Useful, but value changes can break selectors
-
-### Validation and transformation
-- XML well-formedness validation in `Inspector`
-- Error navigation after validation:
-  - single issue: `Jump To Error`
-  - multiple issues: `Jump To Error`, `Prev Error`, `Next Error`
-- XSD validation in `XSD` tab (basic heuristic mode):
-  - checks root element compatibility
-  - checks required direct child elements from inline `xs:sequence`
-- XSLT preview in `XSLT` tab:
-  - upload/paste stylesheet
-  - run transform with JS XSLT-lite engine
-  - copy full transform output
-
-### UX and docs
-- In-app help popover (`How To Use This Tool`) with formatted, scrollable guidance
-- Light/dark theme support
-- Processing/pressed/disabled button states
-
-## How XPath generation works
-
-The generator uses:
+### XPath Generator Notes
+Generator is based on:
 1. Well-formed XML
 2. Current cursor position
-3. Open-tag stack before cursor
+3. Open-tag context before cursor
 
-Ambiguity can happen when cursor is:
-- on whitespace between siblings
-- before root or after document end
-- inside invalid XML
+Suggestion types include:
+- `Absolute • Fragile`
+- `By tag • Broad`
+- `By local-name • Namespace-safe` (useful for SOAP/namespaced XML)
+- `By attribute • Stable` (namespace declaration attributes are excluded)
+- `By text • Medium`
 
-In ambiguous cases, generation may fall back to a nearby/root element.
+Ambiguity may happen when cursor is on whitespace between siblings, outside root scope, or XML is invalid.
 
-## Inspector summary
+## Inspector Summary (`Re-scan XML`)
 
-`Re-scan XML` updates a quick snapshot of the current document:
+Recomputes a quick snapshot of current input:
 - XML validity
-- root element
-- element count
-- line count
-- approximate byte size
-- root namespace declarations
+- Root element
+- Element count
+- Line count
+- Approximate byte size
+- Namespace declarations found on root
 
 ## Project Structure
 
 ```text
 .
-├── background.js
+├── .gitignore
+├── README.md
 ├── manifest.json
 ├── package.json
-├── tests/
-│   └── shared.test.js
+├── background.js
+├── icons/
+│   ├── icon16.png
+│   ├── icon32.png
+│   ├── icon48.png
+│   └── icon128.png
 ├── popup/
-│   ├── popup.css
 │   ├── popup.html
+│   ├── popup.css
 │   └── popup.js
 ├── workbench/
-│   ├── shared.js
-│   ├── workbench.css
 │   ├── workbench.html
-│   └── workbench.js
-└── icons/
-    ├── icon16.png
-    ├── icon32.png
-    ├── icon48.png
-    └── icon128.png
+│   ├── workbench.css
+│   ├── workbench.js
+│   └── shared.js
+├── tests/
+│   └── shared.test.js
+├── test-files/
+│   ├── README.md
+│   ├── catalog_valid.xml
+│   ├── catalog_malformed.xml
+│   ├── catalog_missing_required.xml
+│   ├── catalog_basic.xsd
+│   ├── books_ns.xml
+│   ├── books_ns.xslt
+│   ├── soap_books.xml
+│   ├── soap_books_extract_titles.xslt
+│   ├── rss_feed.xml
+│   └── atom_feed.xml
+└── docs/
+    ├── README.md
+    └── demo.gif
 ```
 
 ## Architecture Notes
 
 - `background.js`
-  - message-based bridge for loading XML from active tab
+  - Messaging bridge used to fetch XML from active tab.
 - `workbench/workbench.js`
-  - UI state, event wiring, validation flows, XPath/XSLT execution
+  - UI state and tab management
+  - Validation/navigation logic
+  - XPath eval + suggestion rendering
+  - XSD/XSLT flows
 - `workbench/shared.js`
-  - testable pure helpers:
-    - parser issue extraction
-    - cursor path inference
-    - XPath literal escaping
-    - basic XSD rule extraction + validation
-    - namespace extraction
+  - Reusable helpers for parsing issues, cursor inference, XPath literals, basic XSD rule extraction, namespace extraction.
 - `tests/shared.test.js`
-  - unit tests for shared helper logic (Node built-in test runner)
+  - Unit tests for shared helper behavior.
 
 ## Run Locally
 
-1. Open `chrome://extensions`
-2. Enable **Developer mode**
-3. Click **Load unpacked**
-4. Select this project folder
-5. Open the extension popup and launch workbench
+1. Open `chrome://extensions`.
+2. Enable **Developer mode**.
+3. Click **Load unpacked**.
+4. Select this project folder.
+5. Open popup and launch the workbench.
 
 ## Run Tests
 
@@ -139,35 +125,25 @@ In ambiguous cases, generation may fall back to a nearby/root element.
 npm test
 ```
 
-## End-to-End Sample Files
+## Manual E2E Testing
 
-Use `test-files/` for manual extension testing (XML/XSD/XSLT fixtures and step-by-step guide).
+Use fixtures in `test-files/` to validate full flows:
+- Validation errors and error navigation
+- Namespace detection and XPath matching
+- SOAP namespace scenarios
+- XSD checks
+- XSLT transforms (including output copy/download)
 
-- `test-files/README.md`
-- `test-files/catalog_valid.xml`
-- `test-files/catalog_basic.xsd`
-- `test-files/catalog_missing_required.xml`
-- `test-files/catalog_malformed.xml`
-- `test-files/books_ns.xml`
-- `test-files/books_ns.xslt`
-- `test-files/rss_feed.xml`
-- `test-files/atom_feed.xml`
-- `test-files/soap_books.xml`
-- `test-files/soap_books_extract_titles.xslt`
+## Current Limitations
 
-## Limitations
-
-- Browser XML parser usually reports first parse error detail only.
-- XPath default namespace behavior follows browser XPath rules:
-  - unprefixed names do not match default namespace elements.
-- XSD validation is intentionally lightweight:
-  - currently supports root + required direct children in inline sequences.
-- JS XSLT-lite engine currently supports common subset patterns (`template match=\"/\"`, `for-each`, `value-of`, `text`, simple `if`).
-- Complex XSLT constructs are not fully supported yet.
+- Browser XML parser generally exposes first parse error details most clearly.
+- XPath default-namespace behavior follows browser rules (unprefixed names do not match default-namespace elements).
+- XSD validation is intentionally lightweight and not full schema engine coverage.
+- XSLT support is a practical JS subset (`template match="/"`, `for-each`, `value-of`, `text`, simple `if`).
 
 ## Roadmap Ideas
 
-- Rich namespace assistant for default namespace prefix rewriting
-- Expanded XSD support (references, complex types, deeper structure)
-- Advanced XPath generator scoring and uniqueness checks
-- Export/import project sessions
+- Richer namespace assistant for default namespace workflows
+- Deeper XSD compatibility
+- Extended XSLT support
+- Session export/import
