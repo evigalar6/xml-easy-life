@@ -224,13 +224,20 @@ function syncLineNumberScroll() {
 }
 
 function getEffectiveCursorOffset() {
-  const raw = typeof xmlInput.selectionStart === "number" ? xmlInput.selectionStart : lastCursorOffset;
-  const safe = Number.isFinite(raw) ? raw : 0;
+  const editorFocused = document.activeElement === xmlInput;
+  const selectionCandidate = typeof xmlInput.selectionStart === "number" ? xmlInput.selectionStart : null;
+  const raw =
+    editorFocused || (selectionCandidate != null && selectionCandidate > 0)
+      ? (selectionCandidate ?? lastCursorOffset)
+      : lastCursorOffset;
+  const safe = Number.isFinite(raw) ? raw : lastCursorOffset;
   return Math.max(0, Math.min(xmlInput.value.length, safe));
 }
 
 function rememberCursorOffset() {
-  lastCursorOffset = getEffectiveCursorOffset();
+  const raw = typeof xmlInput.selectionStart === "number" ? xmlInput.selectionStart : lastCursorOffset;
+  const safe = Number.isFinite(raw) ? raw : lastCursorOffset;
+  lastCursorOffset = Math.max(0, Math.min(xmlInput.value.length, safe));
 }
 
 function updateErrorNavigation() {
@@ -1061,7 +1068,6 @@ generateXpathBtn.addEventListener("click", async () => {
         return;
       }
 
-      rememberCursorOffset();
       const pathStack = inferElementPathFromCursor
         ? inferElementPathFromCursor(xmlText, lastCursorOffset)
         : [];
@@ -1226,8 +1232,12 @@ xmlInput.addEventListener("input", () => {
 });
 
 xmlInput.addEventListener("click", rememberCursorOffset);
+xmlInput.addEventListener("keydown", rememberCursorOffset);
 xmlInput.addEventListener("keyup", rememberCursorOffset);
 xmlInput.addEventListener("select", rememberCursorOffset);
+xmlInput.addEventListener("mouseup", rememberCursorOffset);
+xmlInput.addEventListener("focus", rememberCursorOffset);
+xmlInput.addEventListener("blur", rememberCursorOffset);
 xmlInput.addEventListener("scroll", syncLineNumberScroll);
 
 prevErrorBtn.addEventListener("click", () => {
