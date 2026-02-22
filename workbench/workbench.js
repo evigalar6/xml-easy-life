@@ -440,15 +440,57 @@ function buildLocalNameIndexedXPath(node) {
   return `/${segments.join("/")}`;
 }
 
+function stripPrefix(tagName) {
+  const value = String(tagName || "");
+  const idx = value.indexOf(":");
+  return idx === -1 ? value : value.slice(idx + 1);
+}
+
+function elementMatchesTag(element, wantedTag) {
+  if (!element || !wantedTag) return false;
+  const wanted = String(wantedTag);
+  const wantedLocal = stripPrefix(wanted);
+  return element.tagName === wanted || element.localName === wantedLocal || element.tagName === wantedLocal;
+}
+
+function findFirstDescendantByTag(root, wantedTag) {
+  if (!root) return null;
+  for (const el of Array.from(root.getElementsByTagName("*"))) {
+    if (elementMatchesTag(el, wantedTag)) return el;
+  }
+  return null;
+}
+
 function getRepresentativeNode(doc, pathStack) {
-  if (!pathStack.length) return doc.documentElement;
+  const root = doc?.documentElement;
+  if (!root) return null;
+  if (!pathStack.length) return root;
 
-  const absolutePath = `/${pathStack.join("/")}`;
-  const node = doc.evaluate(absolutePath, doc, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
-  if (node) return node;
+  let current = root;
+  let startIndex = 0;
+  if (elementMatchesTag(root, pathStack[0])) {
+    startIndex = 1;
+  }
 
-  const fallbackTag = pathStack[pathStack.length - 1];
-  return doc.evaluate(`//${fallbackTag}`, doc, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
+  for (let i = startIndex; i < pathStack.length; i += 1) {
+    const wanted = pathStack[i];
+    const direct = Array.from(current.children || []).find((child) => elementMatchesTag(child, wanted));
+    if (direct) {
+      current = direct;
+      continue;
+    }
+
+    const deep = findFirstDescendantByTag(current, wanted);
+    if (deep) {
+      current = deep;
+      continue;
+    }
+
+    const docFallback = findFirstDescendantByTag(doc, wanted);
+    return docFallback || current;
+  }
+
+  return current;
 }
 
 function buildXpathSuggestionsForNode(node) {
