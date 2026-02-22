@@ -357,6 +357,53 @@ function getCursorLineNumber() {
   return xmlInput.value.slice(0, offset).split("\n").length;
 }
 
+function inferTagNameAtOrNearCursor(xmlText, cursorOffset) {
+  const safeOffset = Math.max(0, Math.min(String(xmlText || "").length, cursorOffset || 0));
+  const text = String(xmlText || "");
+
+  const lineStart = text.lastIndexOf("\n", Math.max(0, safeOffset - 1)) + 1;
+  const lineEndIndex = text.indexOf("\n", safeOffset);
+  const lineEnd = lineEndIndex === -1 ? text.length : lineEndIndex;
+  const line = text.slice(lineStart, lineEnd);
+  const lineOffset = safeOffset - lineStart;
+
+  function parseOpeningTag(tagChunk) {
+    const trimmed = tagChunk.trim();
+    if (!trimmed || trimmed.startsWith("</") || /\/>\s*$/.test(trimmed)) return "";
+    const match = /^<([A-Za-z_][\w:.-]*)(\s[^<>]*)?>$/.exec(trimmed);
+    return match ? match[1] : "";
+  }
+
+  const leftLt = line.lastIndexOf("<", lineOffset);
+  const rightGt = line.indexOf(">", lineOffset);
+  if (leftLt !== -1 && rightGt !== -1 && leftLt < rightGt) {
+    const withinTag = parseOpeningTag(line.slice(leftLt, rightGt + 1));
+    if (withinTag) return withinTag;
+  }
+
+  const nextLt = line.indexOf("<", lineOffset);
+  if (nextLt !== -1) {
+    const between = line.slice(lineOffset, nextLt);
+    if (!between.trim()) {
+      const nextGt = line.indexOf(">", nextLt);
+      if (nextGt !== -1) {
+        const nearTag = parseOpeningTag(line.slice(nextLt, nextGt + 1));
+        if (nearTag) return nearTag;
+      }
+    }
+  }
+
+  return "";
+}
+
+function inferCursorPathStack(xmlText, cursorOffset) {
+  const baseStack = inferElementPathFromCursor ? inferElementPathFromCursor(xmlText, cursorOffset) : [];
+  const nearTag = inferTagNameAtOrNearCursor(xmlText, cursorOffset);
+  if (!nearTag) return baseStack;
+  if (baseStack[baseStack.length - 1] === nearTag) return baseStack;
+  return [...baseStack, nearTag];
+}
+
 function buildAbsoluteIndexedXPath(node) {
   if (!node || node.nodeType !== Node.ELEMENT_NODE) return "";
 
@@ -1076,9 +1123,7 @@ generateXpathBtn.addEventListener("click", async () => {
         return;
       }
 
-      const pathStack = inferElementPathFromCursor
-        ? inferElementPathFromCursor(xmlText, lastCursorOffset)
-        : [];
+      const pathStack = inferCursorPathStack(xmlText, lastCursorOffset);
       const targetNode = getRepresentativeNode(parsed.doc, pathStack);
       if (!targetNode) {
         clearXpathSuggestions();
