@@ -335,6 +335,24 @@ function buildAbsoluteIndexedXPath(node) {
   return `/${segments.join("/")}`;
 }
 
+function buildLocalNameIndexedXPath(node) {
+  if (!node || node.nodeType !== Node.ELEMENT_NODE) return "";
+
+  const segments = [];
+  let current = node;
+  while (current && current.nodeType === Node.ELEMENT_NODE) {
+    let index = 1;
+    let sibling = current.previousElementSibling;
+    while (sibling) {
+      if (sibling.localName === current.localName) index += 1;
+      sibling = sibling.previousElementSibling;
+    }
+    segments.unshift(`*[local-name()=${xpathLiteral(current.localName)}][${index}]`);
+    current = current.parentElement;
+  }
+  return `/${segments.join("/")}`;
+}
+
 function getRepresentativeNode(doc, pathStack) {
   if (!pathStack.length) return doc.documentElement;
 
@@ -357,13 +375,27 @@ function buildXpathSuggestionsForNode(node) {
 
   suggestions.push({ label: "By tag", score: "Broad", xpath: `//${node.tagName}` });
 
+  if (node.namespaceURI && node.localName && xpathLiteral) {
+    const localPath = buildLocalNameIndexedXPath(node);
+    if (localPath) {
+      suggestions.push({
+        label: "By local-name",
+        score: "Namespace-safe",
+        xpath: localPath
+      });
+    }
+  }
+
   if (node.attributes && node.attributes.length > 0 && xpathLiteral) {
-    const attr = node.attributes[0];
-    suggestions.push({
-      label: "By attribute",
-      score: "Stable",
-      xpath: `//${node.tagName}[@${attr.name}=${xpathLiteral(attr.value)}]`
-    });
+    const attrs = Array.from(node.attributes);
+    const attr = attrs.find((candidate) => candidate.name !== "xmlns" && candidate.prefix !== "xmlns");
+    if (attr) {
+      suggestions.push({
+        label: "By attribute",
+        score: "Stable",
+        xpath: `//${node.tagName}[@${attr.name}=${xpathLiteral(attr.value)}]`
+      });
+    }
   }
 
   const textValue = (node.textContent || "").trim().replace(/\s+/g, " ");
@@ -379,7 +411,7 @@ function buildXpathSuggestionsForNode(node) {
   for (const item of suggestions) {
     if (!unique.has(item.xpath)) unique.set(item.xpath, item);
   }
-  return [...unique.values()].slice(0, 4);
+  return [...unique.values()].slice(0, 5);
 }
 
 function renderXpathSuggestions(items) {
