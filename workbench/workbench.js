@@ -1123,7 +1123,9 @@ generateXpathBtn.addEventListener("click", async () => {
         return;
       }
 
-      const pathStack = inferCursorPathStack(xmlText, lastCursorOffset);
+      const cursorOffset = getEffectiveCursorOffset();
+      lastCursorOffset = cursorOffset;
+      const pathStack = inferCursorPathStack(xmlText, cursorOffset);
       const targetNode = getRepresentativeNode(parsed.doc, pathStack);
       if (!targetNode) {
         clearXpathSuggestions();
