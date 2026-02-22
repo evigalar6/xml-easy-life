@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bk:library xmlns:bk="urn:books" xmlns:meta="urn:meta">
+  <bk:book meta:id="n1">
+    <bk:title>Namespaced XML Essentials</bk:title>
+    <bk:author>A. Tester</bk:author>
+  </bk:book>
+  <bk:book meta:id="n2">
+    <bk:title>XPath in Practice</bk:title>
+    <bk:author>B. Engineer</bk:author>
+  </bk:book>
+</bk:library>

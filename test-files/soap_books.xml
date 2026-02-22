@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:bk="urn:books:service">
+  <soapenv:Header>
+    <bk:RequestMeta>
+      <bk:RequestId>req-12345</bk:RequestId>
+    </bk:RequestMeta>
+  </soapenv:Header>
+  <soapenv:Body>
+    <bk:GetBooksResponse>
+      <bk:Book bk:id="101">
+        <bk:Title>Service Engineering Handbook</bk:Title>
+        <bk:Price>39.50</bk:Price>
+      </bk:Book>
+      <bk:Book bk:id="102">
+        <bk:Title>Scraping Systems Design</bk:Title>
+        <bk:Price>44.00</bk:Price>
+      </bk:Book>
+    </bk:GetBooksResponse>
+  </soapenv:Body>
+</soapenv:Envelope>

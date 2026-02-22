@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>XML Easy Life Atom</title>
+  <id>urn:xml-easy-life:feed</id>
+  <updated>2026-02-22T11:30:00Z</updated>
+  <entry>
+    <title>Namespaced XPath Reminder</title>
+    <id>urn:xml-easy-life:entry:1</id>
+    <updated>2026-02-22T11:00:00Z</updated>
+    <author><name>XML Bot</name></author>
+  </entry>
+  <entry>
+    <title>XSLT Preview Added</title>
+    <id>urn:xml-easy-life:entry:2</id>
+    <updated>2026-02-22T11:20:00Z</updated>
+    <author><name>Codex</name></author>
+  </entry>
+</feed>

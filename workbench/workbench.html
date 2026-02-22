@@ -27,7 +27,16 @@
             <input id="fileInput" type="file" accept=".xml,text/xml,application/xml" />
             <span>Upload XML</span>
           </label>
+          <button id="loadFromTabBtn" class="ghost">Load From Current Tab</button>
           <button id="loadSample" class="ghost">Load Sample</button>
+        </div>
+        <div class="row button-row recent-row">
+          <label class="select-wrap">
+            <select id="recentSelect">
+              <option value="">No recent XML yet</option>
+            </select>
+          </label>
+          <button id="loadRecentBtn" class="ghost">Load Recent</button>
         </div>
 
         <div class="editor-shell">
@@ -46,10 +55,27 @@
         </div>
 
         <p id="meta" class="meta"></p>
+
+        <div class="xsd-box">
+          <h3>XSD Validation (Basic)</h3>
+          <div class="row button-row">
+            <label class="file-input">
+              <input id="xsdFileInput" type="file" accept=".xsd,.xml,text/xml,application/xml" />
+              <span>Upload XSD</span>
+            </label>
+            <button id="validateXsdBtn" class="ghost">Validate XML With XSD</button>
+          </div>
+          <p id="xsdMeta" class="meta">No XSD loaded.</p>
+        </div>
       </section>
 
       <section class="panel">
         <h2>XPath Tester</h2>
+        <label for="namespaceInput">Namespace mappings (one per line: prefix=uri)</label>
+        <textarea id="namespaceInput" class="namespace-input" wrap="off" spellcheck="false" placeholder="bk=urn:books"></textarea>
+        <div class="row button-row namespace-row">
+          <button id="detectNsBtn" class="ghost">Detect Namespaces From XML</button>
+        </div>
         <label for="xpathInput">XPath expression</label>
         <input id="xpathInput" type="text" placeholder="//book/title/text()" />
         <button id="runXpath" class="button-row-single">Run XPath</button>
@@ -84,6 +110,26 @@
           </button>
         </div>
         <pre id="results" class="results">No query yet.</pre>
+
+        <div class="xslt-box">
+          <h3>XSLT Preview</h3>
+          <div class="row button-row">
+            <label class="file-input">
+              <input id="xsltFileInput" type="file" accept=".xsl,.xslt,.xml,text/xml,application/xml" />
+              <span>Upload XSLT</span>
+            </label>
+            <button id="runXsltBtn" class="ghost">Run Transform</button>
+          </div>
+          <textarea id="xsltInput" class="xslt-input" wrap="off" spellcheck="false" placeholder="Paste XSLT stylesheet here..."></textarea>
+          <div class="results-header transform-header">
+            <h3>Transform Output</h3>
+            <button id="copyXsltOutputBtn" class="ghost copy-results-btn" hidden aria-label="Copy transform output">
+              <span class="clip-glyph" aria-hidden="true">📋</span>
+              Copy
+            </button>
+          </div>
+          <pre id="xsltOutput" class="results xslt-output">No transform yet.</pre>
+        </div>
       </section>
     </main>
 
@@ -95,15 +141,18 @@
           <button id="closeHelpBtn" class="ghost" aria-label="Close help">Close</button>
         </div>
         <div class="help-body">
-          <h3>Quick Start</h3>
+          <p class="help-intro">Use this guide as a fast checklist while testing XML, XPath, XSD, and XSLT workflows.</p>
+
+          <h3>1. Quick Start</h3>
           <ol>
             <li>Upload XML or load XML from current tab.</li>
             <li>Use Validate to check well-formedness.</li>
             <li>Run XPath queries in the tester panel.</li>
             <li>Use Generate XPath From Cursor for suggestions.</li>
+            <li>Use XSLT Preview to transform and inspect output.</li>
           </ol>
 
-          <h3>XPath Suggestion Types</h3>
+          <h3>2. XPath Suggestions</h3>
           <ul>
             <li><strong>Absolute • Fragile</strong>: exact indexed path. Precise but breaks if structure changes.</li>
             <li><strong>By tag • Broad</strong>: matches all nodes with tag name.</li>
@@ -111,14 +160,21 @@
             <li><strong>By text • Medium</strong>: useful but text changes can break it.</li>
           </ul>
 
-          <h3>How Generator Works</h3>
+          <h3>3. How Generation Works</h3>
           <ul>
             <li>Needs well-formed XML.</li>
             <li>Uses current cursor position.</li>
             <li>Infers context from open tag stack before cursor.</li>
           </ul>
 
-          <h3>Ambiguity Cases</h3>
+          <h3>4. Namespaces</h3>
+          <ul>
+            <li>Add mappings as <code>prefix=uri</code>, one per line.</li>
+            <li>Use <code>Detect Namespaces From XML</code> to prefill prefixes.</li>
+            <li>If XML has a default namespace, use prefixed names in XPath.</li>
+          </ul>
+
+          <h3>5. Ambiguity Cases</h3>
           <ul>
             <li>Cursor on whitespace between sibling elements.</li>
             <li>Cursor before root element or after document end.</li>
@@ -126,16 +182,20 @@
           </ul>
           <p>In ambiguous cases, generator may fall back to a nearby or root element.</p>
 
-          <h3>Editor & Validation Notes</h3>
+          <h3>6. Validation and Transform Notes</h3>
           <ul>
             <li>Editor is internally scrollable with line numbers.</li>
             <li>Format button toggles between formatted and original XML.</li>
             <li>Error controls appear only after validation errors are found.</li>
+            <li>Recent XML history is available from the dropdown.</li>
+            <li>XSD validation uses lightweight structural checks.</li>
+            <li>XSLT output has its own copy button for quick sharing.</li>
           </ul>
         </div>
       </section>
     </div>
 
+    <script src="shared.js"></script>
     <script src="workbench.js"></script>
   </body>
 </html>
