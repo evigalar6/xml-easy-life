@@ -5,6 +5,12 @@ XML Easy Life is a Chrome extension workbench for XML-heavy workflows: inspect d
 
 ## Feature Overview
 
+### Tabbed workflow
+- `Inspector`: formatting toggle, well-formedness validation, error navigation, XML summary (`Re-scan XML`)
+- `XPath`: namespace mappings, namespace detection, XPath generator, XPath matcher, result copy
+- `XSD`: upload XSD + run lightweight structural checks
+- `XSLT`: upload/paste stylesheet, run JS-based transform, copy output
+
 ### XML input and navigation
 - Upload local `.xml` files
 - Load XML directly from current active tab
@@ -37,16 +43,16 @@ XML Easy Life is a Chrome extension workbench for XML-heavy workflows: inspect d
   - Useful, but value changes can break selectors
 
 ### Validation and transformation
-- XML well-formedness validation
+- XML well-formedness validation in `Inspector`
 - Error navigation after validation:
   - single issue: `Jump To Error`
   - multiple issues: `Jump To Error`, `Prev Error`, `Next Error`
-- XSD validation (basic heuristic mode):
+- XSD validation in `XSD` tab (basic heuristic mode):
   - checks root element compatibility
   - checks required direct child elements from inline `xs:sequence`
-- XSLT preview:
+- XSLT preview in `XSLT` tab:
   - upload/paste stylesheet
-  - run transform
+  - run transform with JS XSLT-lite engine
   - copy full transform output
 
 ### UX and docs
@@ -67,6 +73,16 @@ Ambiguity can happen when cursor is:
 - inside invalid XML
 
 In ambiguous cases, generation may fall back to a nearby/root element.
+
+## Inspector summary
+
+`Re-scan XML` updates a quick snapshot of the current document:
+- XML validity
+- root element
+- element count
+- line count
+- approximate byte size
+- root namespace declarations
 
 ## Project Structure
 
@@ -146,7 +162,8 @@ Use `test-files/` for manual extension testing (XML/XSD/XSLT fixtures and step-b
   - unprefixed names do not match default namespace elements.
 - XSD validation is intentionally lightweight:
   - currently supports root + required direct children in inline sequences.
-- XSLT preview depends on browser `XSLTProcessor` support and stylesheet complexity.
+- JS XSLT-lite engine currently supports common subset patterns (`template match=\"/\"`, `for-each`, `value-of`, `text`, simple `if`).
+- Complex XSLT constructs are not fully supported yet.
 
 ## Roadmap Ideas
 

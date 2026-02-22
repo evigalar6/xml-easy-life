@@ -20,6 +20,7 @@ const root = document.documentElement;
 const helpBtn = document.getElementById("helpBtn");
 const helpModal = document.getElementById("helpModal");
 const closeHelpBtn = document.getElementById("closeHelpBtn");
+const ackHelpBtn = document.getElementById("ackHelpBtn");
 const helpBackdrop = document.getElementById("helpBackdrop");
 const themeToggleBtn = document.getElementById("themeToggle");
 const loadSampleBtn = document.getElementById("loadSample");
@@ -66,6 +67,7 @@ let activeParserErrorIndex = -1;
 let isFormattedView = false;
 let originalXmlSnapshot = "";
 let recentItems = [];
+let hasUserChangedTab = false;
 let xsdState = {
   name: "",
   text: "",
@@ -144,6 +146,11 @@ async function setActiveTab(tabKey) {
     entry.panel.hidden = !isActive;
   }
   await chrome.storage.local.set({ [ACTIVE_TAB_KEY]: chosen });
+}
+
+async function setActiveTabFromUser(tabKey) {
+  hasUserChangedTab = true;
+  await setActiveTab(tabKey);
 }
 
 function buildInspectorSummary() {
@@ -460,6 +467,104 @@ function buildNamespaceResolver(doc, userMap) {
   };
 }
 
+function extractNamespacesFromDocumentRoot(doc) {
+  const map = {};
+  const rootEl = doc?.documentElement;
+  if (!rootEl) return map;
+  for (const attr of Array.from(rootEl.attributes || [])) {
+    if (attr.name === "xmlns") {
+      map[""] = attr.value;
+    } else if (attr.name.startsWith("xmlns:")) {
+      map[attr.name.slice(6)] = attr.value;
+    }
+  }
+  return map;
+}
+
+function evaluateXPathAsString(expression, contextNode, resolver) {
+  const doc = contextNode.ownerDocument || contextNode;
+  const result = doc.evaluate(expression, contextNode, resolver, XPathResult.ANY_TYPE, null);
+  if (result.resultType === XPathResult.STRING_TYPE) return result.stringValue;
+  if (result.resultType === XPathResult.NUMBER_TYPE) return String(result.numberValue);
+  if (result.resultType === XPathResult.BOOLEAN_TYPE) return String(result.booleanValue);
+  const node = result.iterateNext();
+  if (!node) return "";
+  if (node.nodeType === Node.ATTRIBUTE_NODE) return node.nodeValue || "";
+  return (node.textContent || "").trim();
+}
+
+function evaluateXPathAsNodes(expression, contextNode, resolver) {
+  const doc = contextNode.ownerDocument || contextNode;
+  const result = doc.evaluate(expression, contextNode, resolver, XPathResult.ORDERED_NODE_ITERATOR_TYPE, null);
+  const nodes = [];
+  let node = result.iterateNext();
+  while (node) {
+    nodes.push(node);
+    node = result.iterateNext();
+  }
+  return nodes;
+}
+
+function runXsltTransformLite(xmlDoc, xsltDoc, resolver) {
+  const xslNs = "http://www.w3.org/1999/XSL/Transform";
+  const templates = xsltDoc.getElementsByTagNameNS(xslNs, "template");
+  let rootTemplate = null;
+  for (const t of Array.from(templates)) {
+    if (t.getAttribute("match") === "/") {
+      rootTemplate = t;
+      break;
+    }
+  }
+  if (!rootTemplate) {
+    throw new Error("Unsupported XSLT: missing template with match=\"/\".");
+  }
+
+  function renderNodes(xsltNodes, contextNode) {
+    let out = "";
+    for (const node of Array.from(xsltNodes || [])) {
+      if (node.nodeType === Node.TEXT_NODE || node.nodeType === Node.CDATA_SECTION_NODE) {
+        out += node.nodeValue || "";
+        continue;
+      }
+      if (node.nodeType !== Node.ELEMENT_NODE) {
+        continue;
+      }
+      const isXsl = node.namespaceURI === xslNs;
+      if (!isXsl) {
+        // Literal result element: keep text-content only for text output.
+        out += renderNodes(node.childNodes, contextNode);
+        continue;
+      }
+      const local = node.localName;
+      if (local === "for-each") {
+        const select = node.getAttribute("select");
+        if (!select) continue;
+        const iterNodes = evaluateXPathAsNodes(select, contextNode, resolver);
+        for (const iterNode of iterNodes) {
+          out += renderNodes(node.childNodes, iterNode);
+        }
+      } else if (local === "value-of") {
+        const select = node.getAttribute("select");
+        if (!select) continue;
+        out += evaluateXPathAsString(select, contextNode, resolver);
+      } else if (local === "text") {
+        out += node.textContent || "";
+      } else if (local === "if") {
+        const testExpr = node.getAttribute("test");
+        if (!testExpr) continue;
+        const truthy = evaluateXPathAsString(testExpr, contextNode, resolver);
+        if (truthy && truthy !== "false" && truthy !== "0") {
+          out += renderNodes(node.childNodes, contextNode);
+        }
+      }
+    }
+    return out;
+  }
+
+  const rendered = renderNodes(rootTemplate.childNodes, xmlDoc);
+  return rendered;
+}
+
 function evaluateXpath() {
   const xmlText = xmlInput.value.trim();
   const expr = xpathInput.value.trim();
@@ -678,22 +783,14 @@ function runXsltTransform() {
   }
 
   try {
-    const processor = new XSLTProcessor();
-    processor.importStylesheet(parsedXslt.doc);
-    let output = "";
-
-    try {
-      const transformed = processor.transformToDocument(parsedXml.doc);
-      output = new XMLSerializer().serializeToString(transformed);
-    } catch (_docErr) {
-      const fragment = processor.transformToFragment(parsedXml.doc, document);
-      const holder = document.createElement("div");
-      holder.appendChild(fragment);
-      output = holder.innerHTML || holder.textContent || "";
-    }
-
+    const userNs = parseNamespaceInput();
+    const xmlNs = extractNamespacesFromRoot ? extractNamespacesFromRoot(parsedXml.doc) : {};
+    const xsltNs = extractNamespacesFromDocumentRoot(parsedXslt.doc);
+    const mergedNs = { ...xmlNs, ...xsltNs, ...userNs };
+    const resolver = (prefix) => mergedNs[prefix] || null;
+    const output = runXsltTransformLite(parsedXml.doc, parsedXslt.doc, resolver);
     setXsltOutputContent(output || "Transform produced empty output.", true);
-    setMeta("XSLT transform completed.", "ok");
+    setMeta("XSLT transform completed (JS engine).", "ok");
   } catch (error) {
     setXsltOutputContent("", false);
     setMeta(`XSLT transform failed: ${error.message}`, "error");
@@ -706,28 +803,29 @@ themeToggleBtn.addEventListener("click", () => {
 });
 
 tabInspectorBtn.addEventListener("click", () => {
-  setActiveTab("inspector");
+  setActiveTabFromUser("inspector");
 });
 
 tabXpathBtn.addEventListener("click", () => {
-  setActiveTab("xpath");
+  setActiveTabFromUser("xpath");
 });
 
 tabXsdBtn.addEventListener("click", () => {
-  setActiveTab("xsd");
+  setActiveTabFromUser("xsd");
 });
 
 tabXsltBtn.addEventListener("click", () => {
-  setActiveTab("xslt");
+  setActiveTabFromUser("xslt");
 });
 
 refreshInspectorBtn.addEventListener("click", () => {
   refreshInspectorSummary();
-  setMeta("Inspector refreshed.", "ok");
+  setMeta("XML re-scan complete.", "ok");
 });
 
 helpBtn.addEventListener("click", openHelpModal);
 closeHelpBtn.addEventListener("click", closeHelpModal);
+ackHelpBtn.addEventListener("click", closeHelpModal);
 helpBackdrop.addEventListener("click", closeHelpModal);
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape" && !helpModal.hidden) {
@@ -1062,7 +1160,9 @@ async function loadPendingXml() {
 
   recentItems = Array.isArray(store[RECENT_KEY]) ? store[RECENT_KEY] : [];
   refreshRecentSelect();
-  await setActiveTab(store[ACTIVE_TAB_KEY] || "inspector");
+  if (!hasUserChangedTab) {
+    await setActiveTab(store[ACTIVE_TAB_KEY] || "inspector");
+  }
 
   if (store.pendingXmlPayload?.xml) {
     setXmlContent(store.pendingXmlPayload.xml);

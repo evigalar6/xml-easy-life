@@ -92,8 +92,9 @@ h1 {
   margin: 0 auto;
   padding: 14px 20px 28px;
   display: grid;
-  grid-template-columns: 1.2fr 0.8fr;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
   gap: 16px;
+  align-items: start;
 }
 
 .panel {
@@ -102,6 +103,7 @@ h1 {
   border-radius: 20px;
   padding: 20px;
   box-shadow: var(--shadow);
+  min-width: 0;
 }
 
 .tabs-panel {
@@ -141,6 +143,8 @@ h2 {
 .tab-panel {
   min-height: 0;
   flex: 1;
+  min-width: 0;
+  overflow-x: hidden;
 }
 
 .row {
@@ -190,6 +194,7 @@ h2 {
 .select-wrap select {
   width: 100%;
   min-height: 42px;
+  min-width: 0;
   border-radius: 12px;
   border: 1px solid var(--outline);
   padding: 0 12px;
@@ -371,6 +376,8 @@ label {
 
 .inspector-results {
   height: 240px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 .xslt-output {
@@ -587,6 +594,20 @@ textarea::-webkit-scrollbar-thumb:hover,
   font-size: 24px;
 }
 
+.close-x-btn {
+  width: 36px;
+  min-width: 36px;
+  height: 36px;
+  min-height: 36px;
+  border-radius: 999px;
+  border: 1px solid var(--outline);
+  background: color-mix(in srgb, var(--surface) 72%, var(--primary));
+  color: var(--text);
+  padding: 0;
+  font-size: 22px;
+  line-height: 1;
+}
+
 .help-body {
   padding: 16px;
   max-height: calc(100vh - 170px);
@@ -634,6 +655,13 @@ textarea::-webkit-scrollbar-thumb:hover,
   border: 1px solid var(--outline);
   border-radius: 6px;
   padding: 1px 5px;
+}
+
+.help-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding: 12px 16px 14px;
+  border-top: 1px solid var(--outline);
 }
 
 @media (max-width: 920px) {

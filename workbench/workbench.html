@@ -59,7 +59,7 @@
           <div class="row button-row">
             <button id="formatBtn">Format XML</button>
             <button id="validateBtn" class="ghost">Validate</button>
-            <button id="refreshInspectorBtn" class="ghost">Refresh Inspector</button>
+            <button id="refreshInspectorBtn" class="ghost">Re-scan XML</button>
           </div>
           <div id="errorNavRow" class="row button-row error-nav-row" hidden>
             <button id="jumpErrorBtn" class="ghost" hidden>Jump To Error</button>
@@ -158,21 +158,39 @@
       <section class="help-panel" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
         <div class="help-header">
           <h2 id="helpTitle">XML Easy Life Help</h2>
-          <button id="closeHelpBtn" class="ghost" aria-label="Close help">Close</button>
+          <button id="closeHelpBtn" class="close-x-btn" aria-label="Close help">
+            <span aria-hidden="true">×</span>
+          </button>
         </div>
         <div class="help-body">
-          <p class="help-intro">Use this guide as a fast checklist while testing XML, XPath, XSD, and XSLT workflows.</p>
+          <p class="help-intro">Use this guide as a fast checklist for the tabbed workflow: Inspector, XPath, XSD, and XSLT.</p>
 
           <h3>1. Quick Start</h3>
           <ol>
             <li>Upload XML or load XML from current tab.</li>
-            <li>Use Validate to check well-formedness.</li>
-            <li>Run XPath queries in the tester panel.</li>
-            <li>Use Generate XPath From Cursor for suggestions.</li>
-            <li>Use XSLT Preview to transform and inspect output.</li>
+            <li>Open <strong>Inspector</strong> to format, validate, and review summary.</li>
+            <li>Open <strong>XPath</strong> to generate and run expressions.</li>
+            <li>Open <strong>XSD</strong> to run basic schema checks.</li>
+            <li>Open <strong>XSLT</strong> to transform and inspect output.</li>
           </ol>
 
-          <h3>2. XPath Suggestions</h3>
+          <h3>2. Inspector Tab</h3>
+          <ul>
+            <li><strong>Format XML</strong> toggles between formatted and original source.</li>
+            <li><strong>Validate</strong> checks XML well-formedness.</li>
+            <li><strong>Re-scan XML</strong> refreshes structure summary (root, element count, namespaces, size).</li>
+            <li>Error navigation appears only when validation finds parser issues.</li>
+          </ul>
+
+          <h3>3. XPath Tab</h3>
+          <ul>
+            <li>Manage namespace mappings as <code>prefix=uri</code>.</li>
+            <li>Use <code>Detect Namespaces From XML</code> to prefill prefixes.</li>
+            <li>Generate XPath suggestions from current cursor location.</li>
+            <li>Run XPath and copy full results from the results panel.</li>
+          </ul>
+
+          <h3>4. XPath Suggestion Types</h3>
           <ul>
             <li><strong>Absolute • Fragile</strong>: exact indexed path. Precise but breaks if structure changes.</li>
             <li><strong>By tag • Broad</strong>: matches all nodes with tag name.</li>
@@ -180,21 +198,14 @@
             <li><strong>By text • Medium</strong>: useful but text changes can break it.</li>
           </ul>
 
-          <h3>3. How Generation Works</h3>
+          <h3>5. Generation Rules</h3>
           <ul>
             <li>Needs well-formed XML.</li>
             <li>Uses current cursor position.</li>
             <li>Infers context from open tag stack before cursor.</li>
           </ul>
 
-          <h3>4. Namespaces</h3>
-          <ul>
-            <li>Add mappings as <code>prefix=uri</code>, one per line.</li>
-            <li>Use <code>Detect Namespaces From XML</code> to prefill prefixes.</li>
-            <li>If XML has a default namespace, use prefixed names in XPath.</li>
-          </ul>
-
-          <h3>5. Ambiguity Cases</h3>
+          <h3>6. Ambiguity Cases</h3>
           <ul>
             <li>Cursor on whitespace between sibling elements.</li>
             <li>Cursor before root element or after document end.</li>
@@ -202,15 +213,28 @@
           </ul>
           <p>In ambiguous cases, generator may fall back to a nearby or root element.</p>
 
-          <h3>6. Validation and Transform Notes</h3>
+          <h3>7. XSD Tab</h3>
           <ul>
-            <li>Editor is internally scrollable with line numbers.</li>
-            <li>Format button toggles between formatted and original XML.</li>
-            <li>Error controls appear only after validation errors are found.</li>
-            <li>Recent XML history is available from the dropdown.</li>
-            <li>XSD validation uses lightweight structural checks.</li>
-            <li>XSLT output has its own copy button for quick sharing.</li>
+            <li>Upload XSD and run lightweight structural validation.</li>
+            <li>Checks include root compatibility and required direct child elements.</li>
           </ul>
+
+          <h3>8. XSLT Tab</h3>
+          <ul>
+            <li>Upload/paste stylesheet and run transform.</li>
+            <li>The extension uses a JS-based XSLT-lite engine for supported templates.</li>
+            <li>Transform output has its own copy button.</li>
+          </ul>
+
+          <h3>9. Input Area Notes</h3>
+          <ul>
+            <li>Editor is internally scrollable with synced line numbers.</li>
+            <li>Recent XML history is available from the dropdown.</li>
+            <li>Tabs are task-focused and keep state while switching.</li>
+          </ul>
+        </div>
+        <div class="help-footer">
+          <button id="ackHelpBtn" class="ghost" aria-label="Acknowledge and close help">Got it</button>
         </div>
       </section>
     </div>
