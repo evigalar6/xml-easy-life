@@ -2,10 +2,6 @@
 
 XML Easy Life is a Chrome extension workbench for XML-heavy workflows: inspect data, validate structure, evaluate XPath, generate selectors, and preview XSLT output quickly.
 
-## What it does
-![Demo Placeholder](docs/demo.gif)
-
-`docs/demo.gif` is an optional demo recording for your portfolio README.
 
 ## Feature Overview
 
