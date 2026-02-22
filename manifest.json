@@ -1,0 +1,22 @@
+{
+  "manifest_version": 3,
+  "name": "XML Easy Life",
+  "description": "A calm XML workbench for upload, validation, formatting, and XPath testing.",
+  "version": "0.1.0",
+  "action": {
+    "default_title": "XML Easy Life",
+    "default_popup": "popup/popup.html"
+  },
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "permissions": ["storage", "tabs"],
+  "host_permissions": ["<all_urls>"],
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}

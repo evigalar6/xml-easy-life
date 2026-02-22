@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>XML Easy Life Workbench</title>
+    <link rel="stylesheet" href="workbench.css" />
+  </head>
+  <body>
+    <header class="hero">
+      <div>
+        <p class="kicker">XML Workbench</p>
+        <h1>Inspect, Validate, and Query</h1>
+        <p class="subtitle">Upload your XML file or paste raw XML, then test XPath in seconds.</p>
+      </div>
+      <button id="themeToggle" class="ghost" aria-label="Toggle theme">Toggle Theme</button>
+    </header>
+
+    <main class="layout">
+      <section class="panel">
+        <h2>Input</h2>
+        <div class="row">
+          <label class="file-input">
+            <input id="fileInput" type="file" accept=".xml,text/xml,application/xml" />
+            <span>Upload XML</span>
+          </label>
+          <button id="loadSample" class="ghost">Load Sample</button>
+        </div>
+
+        <textarea id="xmlInput" spellcheck="false" placeholder="Paste XML content here..."></textarea>
+        <div class="row">
+          <button id="formatBtn">Format XML</button>
+          <button id="validateBtn" class="ghost">Validate</button>
+        </div>
+
+        <p id="meta" class="meta"></p>
+      </section>
+
+      <section class="panel">
+        <h2>XPath Tester</h2>
+        <label for="xpathInput">XPath expression</label>
+        <input id="xpathInput" type="text" placeholder="//book/title/text()" />
+        <button id="runXpath">Run XPath</button>
+
+        <h3>Results</h3>
+        <pre id="results" class="results">No query yet.</pre>
+      </section>
+    </main>
+
+    <script src="workbench.js"></script>
+  </body>
+</html>
