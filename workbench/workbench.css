@@ -426,6 +426,16 @@ label {
   gap: 6px;
 }
 
+button.copy-feedback-success {
+  background: linear-gradient(140deg, color-mix(in srgb, var(--ok) 75%, #8ee6d1), var(--ok));
+  color: #062a22;
+}
+
+button.copy-feedback-error {
+  background: linear-gradient(140deg, color-mix(in srgb, var(--err) 80%, #f8a7a7), var(--err));
+  color: #2f0b0b;
+}
+
 .clip-glyph {
   font-size: 13px;
   line-height: 1;
@@ -568,6 +578,9 @@ textarea::-webkit-scrollbar-thumb:hover,
   min-height: 20px;
   margin: 8px 0 0;
   color: var(--muted);
+  white-space: pre-wrap;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
 }
 
 .meta.ok {

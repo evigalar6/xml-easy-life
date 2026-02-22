@@ -111,18 +111,56 @@ function formatLocalTimestamp(value) {
   return parsed.toLocaleString(undefined, TIMESTAMP_FORMAT);
 }
 
+function showCopyFeedback(button, ok = true) {
+  if (!button) return;
+  if (!button.dataset.originalHtml) {
+    button.dataset.originalHtml = button.innerHTML;
+  }
+
+  button.disabled = true;
+  button.classList.remove("copy-feedback-success", "copy-feedback-error");
+  button.classList.add(ok ? "copy-feedback-success" : "copy-feedback-error");
+  button.textContent = ok ? "Copied" : "Copy failed";
+
+  window.setTimeout(() => {
+    button.classList.remove("copy-feedback-success", "copy-feedback-error");
+    if (button.dataset.originalHtml) {
+      button.innerHTML = button.dataset.originalHtml;
+    }
+    button.disabled = false;
+  }, ok ? 1100 : 1400);
+}
+
+function normalizeDisplayText(value) {
+  return String(value ?? "")
+    .replace(/\r\n/g, "\n")
+    .replace(/\\r\\n/g, "\n")
+    .replace(/\\n/g, "\n");
+}
+
+function normalizeXmlForEditor(xmlText) {
+  const text = String(xmlText ?? "");
+  const hasRealNewlines = text.includes("\n");
+  const hasEscapedNewlines = /\\n/.test(text) || /\\r\\n/.test(text);
+  const looksLikeXml = /<[^>]+>/.test(text);
+  if (!hasRealNewlines && hasEscapedNewlines && looksLikeXml) {
+    return normalizeDisplayText(text).replace(/\\t/g, "\t");
+  }
+  return text;
+}
+
 function setMeta(message, kind = "") {
-  meta.textContent = message;
+  meta.textContent = normalizeDisplayText(message);
   meta.className = `meta ${kind}`.trim();
 }
 
 function setXsdMeta(message, kind = "") {
-  xsdMeta.textContent = message;
+  xsdMeta.textContent = normalizeDisplayText(message);
   xsdMeta.className = `meta ${kind}`.trim();
 }
 
 function setXsdFileInfo(message, kind = "") {
-  xsdFileInfo.textContent = message;
+  xsdFileInfo.textContent = normalizeDisplayText(message);
   xsdFileInfo.className = `meta ${kind}`.trim();
 }
 
@@ -145,12 +183,12 @@ function clearXpathSuggestions() {
 }
 
 function setResultsContent(text, showCopy = false) {
-  results.textContent = text;
+  results.textContent = normalizeDisplayText(text);
   copyResultsBtn.hidden = !showCopy;
 }
 
 function setXsltOutputContent(text, showActions = false) {
-  xsltOutput.textContent = text;
+  xsltOutput.textContent = normalizeDisplayText(text);
   copyXsltOutputBtn.hidden = !showActions;
   downloadXsltOutputBtn.hidden = !showActions;
 }
@@ -201,19 +239,19 @@ function buildInspectorSummary() {
 
   const parsed = parseXml(xmlText);
   if (!parsed.ok) {
-    return `XML status: invalid\\n${parsed.error}`;
+    return `XML status: invalid\n${parsed.error}`;
   }
 
   const doc = parsed.doc;
   const rootEl = doc.documentElement;
   const elementCount = doc.getElementsByTagName("*").length;
-  const lineCount = xmlText.split("\\n").length;
+  const lineCount = xmlText.split("\n").length;
   const byteLength = new TextEncoder().encode(xmlText).length;
   const namespaces = extractNamespacesFromRoot ? extractNamespacesFromRoot(doc) : {};
   const namespaceLines = Object.keys(namespaces).length
     ? Object.entries(namespaces)
         .map(([prefix, uri]) => `${prefix || "(default)"} = ${uri}`)
-        .join("\\n")
+        .join("\n")
     : "None detected on root.";
 
   return [
@@ -225,7 +263,7 @@ function buildInspectorSummary() {
     ``,
     `Namespaces:`,
     namespaceLines
-  ].join("\\n");
+  ].join("\n");
 }
 
 function refreshInspectorSummary() {
@@ -331,7 +369,7 @@ function parseXml(xmlText) {
   const doc = parser.parseFromString(xmlText, "application/xml");
   const errorNode = doc.querySelector("parsererror");
   if (errorNode) {
-    const errorText = errorNode.textContent.trim();
+    const errorText = normalizeDisplayText(errorNode.textContent.trim());
     return {
       ok: false,
       error: errorText,
@@ -613,8 +651,10 @@ function renderXpathSuggestions(items) {
       try {
         await navigator.clipboard.writeText(item.xpath);
         setMeta("XPath copied.", "ok");
+        showCopyFeedback(copyBtn, true);
       } catch (_error) {
         setMeta("Clipboard copy failed in this context.", "error");
+        showCopyFeedback(copyBtn, false);
       }
     });
 
@@ -908,7 +948,7 @@ async function withButtonProcessing(button, task, label = "Processing...") {
 }
 
 function setXmlContent(xmlText) {
-  xmlInput.value = xmlText;
+  xmlInput.value = normalizeXmlForEditor(xmlText);
   updateLineNumbers();
   syncLineNumberScroll();
   lastCursorOffset = Math.min(lastCursorOffset, xmlInput.value.length);
@@ -1407,8 +1447,10 @@ copyResultsBtn.addEventListener("click", async () => {
   try {
     await navigator.clipboard.writeText(output);
     setMeta("Results copied to clipboard.", "ok");
+    showCopyFeedback(copyResultsBtn, true);
   } catch (_error) {
     setMeta("Could not copy results in this context.", "error");
+    showCopyFeedback(copyResultsBtn, false);
   }
 });
 
@@ -1418,8 +1460,10 @@ copyXsltOutputBtn.addEventListener("click", async () => {
   try {
     await navigator.clipboard.writeText(output);
     setMeta("Transform output copied to clipboard.", "ok");
+    showCopyFeedback(copyXsltOutputBtn, true);
   } catch (_error) {
     setMeta("Could not copy transform output in this context.", "error");
+    showCopyFeedback(copyXsltOutputBtn, false);
   }
 });
 
