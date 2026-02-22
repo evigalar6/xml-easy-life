@@ -10,6 +10,8 @@ const loadSampleBtn = document.getElementById("loadSample");
 const formatBtn = document.getElementById("formatBtn");
 const validateBtn = document.getElementById("validateBtn");
 const runXpathBtn = document.getElementById("runXpath");
+const errorNavRow = document.getElementById("errorNavRow");
+const jumpErrorBtn = document.getElementById("jumpErrorBtn");
 const prevErrorBtn = document.getElementById("prevErrorBtn");
 const nextErrorBtn = document.getElementById("nextErrorBtn");
 const errorNavInfo = document.getElementById("errorNavInfo");
@@ -64,12 +66,20 @@ function extractParserIssues(errorText) {
 
 function updateErrorNavigation() {
   const hasErrors = parserErrors.length > 0;
-  prevErrorBtn.disabled = !hasErrors;
-  nextErrorBtn.disabled = !hasErrors;
+  errorNavRow.hidden = !hasErrors;
   if (!hasErrors) {
     errorNavInfo.textContent = "No errors";
+    jumpErrorBtn.hidden = true;
+    prevErrorBtn.hidden = true;
+    nextErrorBtn.hidden = true;
     return;
   }
+
+  jumpErrorBtn.hidden = false;
+  const hasMultiple = parserErrors.length > 1;
+  prevErrorBtn.hidden = !hasMultiple;
+  nextErrorBtn.hidden = !hasMultiple;
+
   errorNavInfo.textContent = `Error ${activeParserErrorIndex + 1} of ${parserErrors.length} (${parserErrors[activeParserErrorIndex].message})`;
 }
 
@@ -79,18 +89,23 @@ function setParserErrors(issues) {
   updateErrorNavigation();
 }
 
-function getOffsetForLineColumn(text, line, column) {
-  if (line <= 1 && column <= 1) return 0;
+function getLineRange(text, line, fallbackColumn) {
   const lines = text.split("\n");
   let offset = 0;
   for (let i = 0; i < lines.length; i += 1) {
     const lineNumber = i + 1;
     if (lineNumber === line) {
-      return offset + Math.max(0, Math.min(lines[i].length, column - 1));
+      const start = offset;
+      const end = offset + lines[i].length;
+      if (start === end) {
+        const caret = Math.max(0, Math.min(lines[i].length, fallbackColumn - 1));
+        return { start: offset + caret, end: offset + caret };
+      }
+      return { start, end };
     }
     offset += lines[i].length + 1;
   }
-  return text.length;
+  return { start: text.length, end: text.length };
 }
 
 function jumpToParserError(index) {
@@ -99,11 +114,15 @@ function jumpToParserError(index) {
   }
   activeParserErrorIndex = index;
   const issue = parserErrors[index];
-  const offset = getOffsetForLineColumn(xmlInput.value, issue.line, issue.column);
+  const lineRange = getLineRange(xmlInput.value, issue.line, issue.column);
   xmlInput.focus();
-  xmlInput.setSelectionRange(offset, offset);
+  xmlInput.setSelectionRange(lineRange.start, lineRange.end);
+  xmlInput.classList.add("error-focus");
+  setTimeout(() => {
+    xmlInput.classList.remove("error-focus");
+  }, 900);
   const totalLines = xmlInput.value.split("\n");
-  const avgLineHeight = 22;
+  const avgLineHeight = parseFloat(getComputedStyle(xmlInput).lineHeight) || 22;
   const targetTop = Math.max(0, (issue.line - 2) * avgLineHeight);
   if (totalLines.length > 1) {
     xmlInput.scrollTop = targetTop;
@@ -184,11 +203,8 @@ function evaluateXpath() {
 
   const parsed = parseXml(xmlText);
   if (!parsed.ok) {
-    setParserErrors(parsed.issues);
+    setParserErrors([]);
     setMeta(`Invalid XML: ${parsed.error}`, "error");
-    if (parsed.issues.length > 0) {
-      jumpToParserError(0);
-    }
     return;
   }
   setParserErrors([]);
@@ -282,11 +298,8 @@ formatBtn.addEventListener("click", async () => {
 
       const parsed = parseXml(xmlText);
       if (!parsed.ok) {
-        setParserErrors(parsed.issues);
+        setParserErrors([]);
         setMeta(`Invalid XML: ${parsed.error}`, "error");
-        if (parsed.issues.length > 0) {
-          jumpToParserError(0);
-        }
         return;
       }
 
@@ -314,9 +327,6 @@ validateBtn.addEventListener("click", async () => {
       if (!parsed.ok) {
         setParserErrors(parsed.issues);
         setMeta(`Invalid XML: ${parsed.error}`, "error");
-        if (parsed.issues.length > 0) {
-          jumpToParserError(0);
-        }
         return;
       }
 
@@ -371,6 +381,11 @@ nextErrorBtn.addEventListener("click", () => {
   if (parserErrors.length === 0) return;
   const next = (activeParserErrorIndex + 1) % parserErrors.length;
   jumpToParserError(next);
+});
+
+jumpErrorBtn.addEventListener("click", () => {
+  if (parserErrors.length === 0 || activeParserErrorIndex < 0) return;
+  jumpToParserError(activeParserErrorIndex);
 });
 
 async function loadPendingXml() {

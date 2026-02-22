@@ -29,15 +29,16 @@
 
         <div class="editor-shell">
           <pre id="lineNumbers" class="line-numbers" aria-hidden="true">1</pre>
-          <textarea id="xmlInput" spellcheck="false" placeholder="Paste XML content here..."></textarea>
+          <textarea id="xmlInput" wrap="off" spellcheck="false" placeholder="Paste XML content here..."></textarea>
         </div>
         <div class="row button-row">
           <button id="formatBtn">Format XML</button>
           <button id="validateBtn" class="ghost">Validate</button>
         </div>
-        <div class="row button-row error-nav-row">
-          <button id="prevErrorBtn" class="ghost" disabled>Prev Error</button>
-          <button id="nextErrorBtn" class="ghost" disabled>Next Error</button>
+        <div id="errorNavRow" class="row button-row error-nav-row" hidden>
+          <button id="jumpErrorBtn" class="ghost">Jump To Error</button>
+          <button id="prevErrorBtn" class="ghost">Prev Error</button>
+          <button id="nextErrorBtn" class="ghost">Next Error</button>
           <span id="errorNavInfo" class="error-nav-info">No errors</span>
         </div>
 
