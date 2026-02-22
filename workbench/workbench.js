@@ -4,6 +4,11 @@ const results = document.getElementById("results");
 const meta = document.getElementById("meta");
 const fileInput = document.getElementById("fileInput");
 const root = document.documentElement;
+const themeToggleBtn = document.getElementById("themeToggle");
+const loadSampleBtn = document.getElementById("loadSample");
+const formatBtn = document.getElementById("formatBtn");
+const validateBtn = document.getElementById("validateBtn");
+const runXpathBtn = document.getElementById("runXpath");
 
 const SAMPLE_XML = `<?xml version="1.0" encoding="UTF-8"?>
 <catalog>
@@ -124,54 +129,103 @@ function evaluateXpath() {
 
 function setTheme(theme) {
   root.dataset.theme = theme;
+  themeToggleBtn.setAttribute("aria-pressed", String(theme === "dark"));
   chrome.storage.local.set({ themePreference: theme });
 }
 
-document.getElementById("themeToggle").addEventListener("click", async () => {
+function waitForPaint() {
+  return new Promise((resolve) => requestAnimationFrame(() => resolve()));
+}
+
+async function withButtonProcessing(button, task, label = "Processing...") {
+  if (!button) return task();
+
+  const previousLabel = button.textContent;
+  button.disabled = true;
+  button.classList.add("is-processing");
+  button.setAttribute("aria-busy", "true");
+  button.textContent = label;
+
+  // Ensure state is painted before heavier work starts.
+  await waitForPaint();
+
+  try {
+    return await task();
+  } finally {
+    button.disabled = false;
+    button.classList.remove("is-processing");
+    button.removeAttribute("aria-busy");
+    button.textContent = previousLabel;
+  }
+}
+
+themeToggleBtn.addEventListener("click", async () => {
   const current = root.dataset.theme || "light";
   setTheme(current === "dark" ? "light" : "dark");
 });
 
-document.getElementById("loadSample").addEventListener("click", () => {
-  xmlInput.value = formatXml(SAMPLE_XML);
-  results.textContent = "Sample loaded.";
-  setMeta("Sample XML loaded.", "ok");
+loadSampleBtn.addEventListener("click", async () => {
+  await withButtonProcessing(
+    loadSampleBtn,
+    async () => {
+      xmlInput.value = formatXml(SAMPLE_XML);
+      results.textContent = "Sample loaded.";
+      setMeta("Sample XML loaded.", "ok");
+    },
+    "Loading..."
+  );
 });
 
-document.getElementById("formatBtn").addEventListener("click", () => {
-  const xmlText = xmlInput.value.trim();
-  if (!xmlText) {
-    setMeta("Nothing to format yet.", "error");
-    return;
-  }
+formatBtn.addEventListener("click", async () => {
+  await withButtonProcessing(
+    formatBtn,
+    async () => {
+      const xmlText = xmlInput.value.trim();
+      if (!xmlText) {
+        setMeta("Nothing to format yet.", "error");
+        return;
+      }
 
-  const parsed = parseXml(xmlText);
-  if (!parsed.ok) {
-    setMeta(`Invalid XML: ${parsed.error}`, "error");
-    return;
-  }
+      const parsed = parseXml(xmlText);
+      if (!parsed.ok) {
+        setMeta(`Invalid XML: ${parsed.error}`, "error");
+        return;
+      }
 
-  xmlInput.value = formatXml(documentToString(parsed.doc));
-  setMeta("XML formatted successfully.", "ok");
+      xmlInput.value = formatXml(documentToString(parsed.doc));
+      setMeta("XML formatted successfully.", "ok");
+    },
+    "Formatting..."
+  );
 });
 
-document.getElementById("validateBtn").addEventListener("click", () => {
-  const xmlText = xmlInput.value.trim();
-  if (!xmlText) {
-    setMeta("Paste or upload XML first.", "error");
-    return;
-  }
+validateBtn.addEventListener("click", async () => {
+  await withButtonProcessing(
+    validateBtn,
+    async () => {
+      const xmlText = xmlInput.value.trim();
+      if (!xmlText) {
+        setMeta("Paste or upload XML first.", "error");
+        return;
+      }
 
-  const parsed = parseXml(xmlText);
-  if (!parsed.ok) {
-    setMeta(`Invalid XML: ${parsed.error}`, "error");
-    return;
-  }
+      const parsed = parseXml(xmlText);
+      if (!parsed.ok) {
+        setMeta(`Invalid XML: ${parsed.error}`, "error");
+        return;
+      }
 
-  setMeta("XML is well-formed.", "ok");
+      setMeta("XML is well-formed.", "ok");
+    },
+    "Checking..."
+  );
 });
 
-document.getElementById("runXpath").addEventListener("click", evaluateXpath);
+runXpathBtn.addEventListener("click", async () => {
+  await withButtonProcessing(runXpathBtn, async () => {
+    evaluateXpath();
+  });
+});
 
 fileInput.addEventListener("change", () => {
   const file = fileInput.files?.[0];
@@ -194,9 +248,9 @@ async function loadPendingXml() {
   const store = await chrome.storage.local.get(["pendingXmlPayload", "themePreference"]);
 
   if (store.themePreference) {
-    root.dataset.theme = store.themePreference;
+    setTheme(store.themePreference);
   } else {
-    root.dataset.theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    setTheme(window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
   }
 
   const payload = store.pendingXmlPayload;
