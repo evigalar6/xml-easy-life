@@ -113,6 +113,7 @@
           <label for="xpathInput">XPath expression</label>
           <input id="xpathInput" type="text" placeholder="//book/title/text()" />
           <button id="runXpath" class="button-row-single">Run XPath</button>
+          <p id="xpathMeta" class="meta"></p>
           <div class="results-header">
             <h3>Results</h3>
             <button id="copyResultsBtn" class="ghost copy-results-btn" hidden aria-label="Copy results">
@@ -147,6 +148,7 @@
             </label>
             <button id="runXsltBtn" class="ghost">Run Transform</button>
           </div>
+          <p id="xsltMeta" class="meta"></p>
           <textarea id="xsltInput" class="xslt-input" wrap="off" spellcheck="false" placeholder="Paste XSLT stylesheet here..."></textarea>
           <div class="results-header transform-header">
             <h3>Transform Output</h3>

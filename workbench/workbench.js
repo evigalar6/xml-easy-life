@@ -6,6 +6,7 @@ const detectNsBtn = document.getElementById("detectNsBtn");
 const results = document.getElementById("results");
 const copyResultsBtn = document.getElementById("copyResultsBtn");
 const meta = document.getElementById("meta");
+const xpathMeta = document.getElementById("xpathMeta");
 const xsdMeta = document.getElementById("xsdMeta");
 const xsdFileInfo = document.getElementById("xsdFileInfo");
 const fileInput = document.getElementById("fileInput");
@@ -15,6 +16,7 @@ const validateXsdBtn = document.getElementById("validateXsdBtn");
 const xsltFileInput = document.getElementById("xsltFileInput");
 const xsltInput = document.getElementById("xsltInput");
 const xsltOutput = document.getElementById("xsltOutput");
+const xsltMeta = document.getElementById("xsltMeta");
 const copyXsltOutputBtn = document.getElementById("copyXsltOutputBtn");
 const downloadXsltOutputBtn = document.getElementById("downloadXsltOutputBtn");
 const runXsltBtn = document.getElementById("runXsltBtn");
@@ -154,6 +156,12 @@ function setMeta(message, kind = "") {
   meta.className = `meta ${kind}`.trim();
 }
 
+function setXpathMeta(message, kind = "") {
+  if (!xpathMeta) return;
+  xpathMeta.textContent = normalizeDisplayText(message);
+  xpathMeta.className = `meta ${kind}`.trim();
+}
+
 function setXsdMeta(message, kind = "") {
   xsdMeta.textContent = normalizeDisplayText(message);
   xsdMeta.className = `meta ${kind}`.trim();
@@ -162,6 +170,12 @@ function setXsdMeta(message, kind = "") {
 function setXsdFileInfo(message, kind = "") {
   xsdFileInfo.textContent = normalizeDisplayText(message);
   xsdFileInfo.className = `meta ${kind}`.trim();
+}
+
+function setXsltMeta(message, kind = "") {
+  if (!xsltMeta) return;
+  xsltMeta.textContent = normalizeDisplayText(message);
+  xsltMeta.className = `meta ${kind}`.trim();
 }
 
 function resetFormatToggle() {
@@ -650,7 +664,7 @@ function renderXpathSuggestions(items) {
     useBtn.textContent = "Use";
     useBtn.addEventListener("click", () => {
       xpathInput.value = item.xpath;
-      setMeta("XPath inserted into input.", "ok");
+      setXpathMeta("XPath inserted into input.", "ok");
     });
 
     const copyBtn = document.createElement("button");
@@ -659,10 +673,10 @@ function renderXpathSuggestions(items) {
     copyBtn.addEventListener("click", async () => {
       try {
         await navigator.clipboard.writeText(item.xpath);
-        setMeta("XPath copied.", "ok");
+        setXpathMeta("XPath copied.", "ok");
         showCopyFeedback(copyBtn, true);
       } catch (_error) {
-        setMeta("Clipboard copy failed in this context.", "error");
+        setXpathMeta("Clipboard copy failed in this context.", "error");
         showCopyFeedback(copyBtn, false);
       }
     });
@@ -851,7 +865,7 @@ function evaluateXpath() {
   const expr = xpathInput.value.trim();
 
   if (!xmlText || !expr) {
-    setMeta("Provide both XML and an XPath expression.", "error");
+    setXpathMeta("Provide both XML and an XPath expression.", "error");
     return;
   }
 
@@ -859,7 +873,7 @@ function evaluateXpath() {
   if (!parsed.ok) {
     setParserErrors([]);
     setResultsContent("", false);
-    setMeta(`Invalid XML: ${parsed.error}`, "error");
+    setXpathMeta(`Invalid XML: ${parsed.error}`, "error");
     return;
   }
   setParserErrors([]);
@@ -881,7 +895,7 @@ function evaluateXpath() {
             ? String(result.booleanValue)
             : result.stringValue;
       setResultsContent(primitive, true);
-      setMeta("XPath evaluated to a scalar value.", "ok");
+      setXpathMeta("XPath evaluated to a scalar value.", "ok");
       return;
     }
 
@@ -898,18 +912,18 @@ function evaluateXpath() {
       const hasDefaultNs = Boolean(merged[""]);
       const hasPrefix = /\b[A-Za-z_][\w.-]*:/.test(expr);
       if (hasDefaultNs && !hasPrefix) {
-        setMeta("No match. XML has a default namespace; use prefixed names in XPath.", "error");
+        setXpathMeta("No match. XML has a default namespace; use prefixed names in XPath.", "error");
       } else {
-        setMeta("XPath executed successfully.", "ok");
+        setXpathMeta("XPath executed successfully.", "ok");
       }
       return;
     }
 
     setResultsContent(output.join("\n\n"), true);
-    setMeta(`XPath matched ${output.length} node(s).`, "ok");
+    setXpathMeta(`XPath matched ${output.length} node(s).`, "ok");
   } catch (error) {
     setResultsContent("", false);
-    setMeta(`XPath error: ${error.message}`, "error");
+    setXpathMeta(`XPath error: ${error.message}`, "error");
   }
 }
 
@@ -1049,20 +1063,20 @@ function runBasicXsdValidation() {
 function runXsltTransform() {
   const parsedXml = parseXml(xmlInput.value);
   if (!parsedXml.ok) {
-    setMeta(`XML invalid: ${parsedXml.error}`, "error");
+    setXsltMeta(`XML invalid: ${parsedXml.error}`, "error");
     setXsltOutputContent("", false);
     return;
   }
 
   const xsltText = xsltInput.value.trim();
   if (!xsltText) {
-    setMeta("Provide XSLT first.", "error");
+    setXsltMeta("Provide XSLT first.", "error");
     return;
   }
 
   const parsedXslt = parseXml(xsltText);
   if (!parsedXslt.ok) {
-    setMeta(`XSLT invalid: ${parsedXslt.error}`, "error");
+    setXsltMeta(`XSLT invalid: ${parsedXslt.error}`, "error");
     setXsltOutputContent("", false);
     return;
   }
@@ -1077,17 +1091,17 @@ function runXsltTransform() {
     setXsltOutputContent(transformed.output || "Transform produced empty output.", true);
 
     if (transformed.stats.forEachTotal > 0 && transformed.stats.forEachMatchedNodes === 0) {
-      setMeta(
+      setXsltMeta(
         "Transform ran, but XSLT selectors matched 0 nodes. Check XML/XSLT namespaces or element paths.",
         "error"
       );
       return;
     }
 
-    setMeta("XSLT transform completed (JS engine).", "ok");
+    setXsltMeta("XSLT transform completed (JS engine).", "ok");
   } catch (error) {
     setXsltOutputContent("", false);
-    setMeta(`XSLT transform failed: ${error.message}`, "error");
+    setXsltMeta(`XSLT transform failed: ${error.message}`, "error");
   }
 }
 
@@ -1241,14 +1255,14 @@ generateXpathBtn.addEventListener("click", async () => {
       const xmlText = xmlInput.value;
       if (!xmlText.trim()) {
         clearXpathSuggestions();
-        setMeta("Paste or upload XML first.", "error");
+        setXpathMeta("Paste or upload XML first.", "error");
         return;
       }
 
       const parsed = parseXml(xmlText);
       if (!parsed.ok) {
         clearXpathSuggestions();
-        setMeta(`Invalid XML: ${parsed.error}`, "error");
+        setXpathMeta(`Invalid XML: ${parsed.error}`, "error");
         return;
       }
 
@@ -1258,7 +1272,7 @@ generateXpathBtn.addEventListener("click", async () => {
       const targetNode = getRepresentativeNode(parsed.doc, pathStack);
       if (!targetNode) {
         clearXpathSuggestions();
-        setMeta("No element found at cursor.", "error");
+        setXpathMeta("No element found at cursor.", "error");
         return;
       }
 
@@ -1268,7 +1282,7 @@ generateXpathBtn.addEventListener("click", async () => {
       };
       const suggestions = buildXpathSuggestionsForNode(targetNode, mergedNs);
       renderXpathSuggestions(suggestions);
-      setMeta(`Generated ${suggestions.length} XPath suggestion(s) from line ${getCursorLineNumber()}.`, "ok");
+      setXpathMeta(`Generated ${suggestions.length} XPath suggestion(s) from line ${getCursorLineNumber()}.`, "ok");
     },
     "Generating..."
   );
@@ -1280,7 +1294,7 @@ detectNsBtn.addEventListener("click", async () => {
     async () => {
       const parsed = parseXml(xmlInput.value);
       if (!parsed.ok) {
-        setMeta(`Invalid XML: ${parsed.error}`, "error");
+        setXpathMeta(`Invalid XML: ${parsed.error}`, "error");
         return;
       }
 
@@ -1296,9 +1310,9 @@ detectNsBtn.addEventListener("click", async () => {
       }
       setNamespaceInputFromMap(detected);
       if (defaultNs) {
-        setMeta("Detected namespaces. Added a prefix alias for default namespace.", "ok");
+        setXpathMeta("Detected namespaces. Added a prefix alias for default namespace.", "ok");
       } else {
-        setMeta("Detected namespace prefixes from XML root.", "ok");
+        setXpathMeta("Detected namespace prefixes from XML root.", "ok");
       }
     },
     "Detecting..."
@@ -1407,10 +1421,10 @@ xsltFileInput.addEventListener("change", () => {
   const reader = new FileReader();
   reader.onload = () => {
     xsltInput.value = String(reader.result || "");
-    setMeta(`Loaded XSLT file: ${file.name}`, "ok");
+    setXsltMeta(`Loaded XSLT file: ${file.name}`, "ok");
   };
   reader.onerror = () => {
-    setMeta("Could not read XSLT file.", "error");
+    setXsltMeta("Could not read XSLT file.", "error");
   };
   reader.readAsText(file);
 });
@@ -1455,10 +1469,10 @@ copyResultsBtn.addEventListener("click", async () => {
   if (!output) return;
   try {
     await navigator.clipboard.writeText(output);
-    setMeta("Results copied to clipboard.", "ok");
+    setXpathMeta("Results copied to clipboard.", "ok");
     showCopyFeedback(copyResultsBtn, true);
   } catch (_error) {
-    setMeta("Could not copy results in this context.", "error");
+    setXpathMeta("Could not copy results in this context.", "error");
     showCopyFeedback(copyResultsBtn, false);
   }
 });
@@ -1468,10 +1482,10 @@ copyXsltOutputBtn.addEventListener("click", async () => {
   if (!output) return;
   try {
     await navigator.clipboard.writeText(output);
-    setMeta("Transform output copied to clipboard.", "ok");
+    setXsltMeta("Transform output copied to clipboard.", "ok");
     showCopyFeedback(copyXsltOutputBtn, true);
   } catch (_error) {
-    setMeta("Could not copy transform output in this context.", "error");
+    setXsltMeta("Could not copy transform output in this context.", "error");
     showCopyFeedback(copyXsltOutputBtn, false);
   }
 });
@@ -1484,9 +1498,9 @@ downloadXsltOutputBtn.addEventListener("click", () => {
     const suffix = isXml ? "xml" : "txt";
     const filename = `xslt-transform-output.${suffix}`;
     downloadTextFile(output, filename);
-    setMeta(`Transform output downloaded as ${filename}.`, "ok");
+    setXsltMeta(`Transform output downloaded as ${filename}.`, "ok");
   } catch (_error) {
-    setMeta("Could not download transform output in this context.", "error");
+    setXsltMeta("Could not download transform output in this context.", "error");
   }
 });
 
