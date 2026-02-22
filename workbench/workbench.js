@@ -461,6 +461,24 @@ function findFirstDescendantByTag(root, wantedTag) {
   return null;
 }
 
+function resolvePrefixForNamespace(uri, namespaceMap) {
+  if (!uri || !namespaceMap) return "";
+  for (const [prefix, value] of Object.entries(namespaceMap)) {
+    if (prefix && value === uri) return prefix;
+  }
+  return "";
+}
+
+function buildElementSelector(node, namespaceMap) {
+  if (!node || node.nodeType !== Node.ELEMENT_NODE) return "";
+  if (!node.namespaceURI) return node.tagName;
+
+  const mappedPrefix = resolvePrefixForNamespace(node.namespaceURI, namespaceMap);
+  if (mappedPrefix) return `${mappedPrefix}:${node.localName}`;
+  if (node.prefix) return `${node.prefix}:${node.localName}`;
+  return `*[local-name()=${xpathLiteral(node.localName)}]`;
+}
+
 function getRepresentativeNode(doc, pathStack) {
   const root = doc?.documentElement;
   if (!root) return null;
@@ -493,16 +511,18 @@ function getRepresentativeNode(doc, pathStack) {
   return current;
 }
 
-function buildXpathSuggestionsForNode(node) {
+function buildXpathSuggestionsForNode(node, namespaceMap = {}) {
   const suggestions = [];
   if (!node || node.nodeType !== Node.ELEMENT_NODE) return suggestions;
+  const elementSelector = buildElementSelector(node, namespaceMap);
+  if (!elementSelector) return suggestions;
 
   const absolute = buildAbsoluteIndexedXPath(node);
   if (absolute) {
     suggestions.push({ label: "Absolute", score: "Fragile", xpath: absolute });
   }
 
-  suggestions.push({ label: "By tag", score: "Broad", xpath: `//${node.tagName}` });
+  suggestions.push({ label: "By tag", score: "Broad", xpath: `//${elementSelector}` });
 
   if (node.namespaceURI && node.localName && xpathLiteral) {
     const localPath = buildLocalNameIndexedXPath(node);
@@ -522,7 +542,7 @@ function buildXpathSuggestionsForNode(node) {
       suggestions.push({
         label: "By attribute",
         score: "Stable",
-        xpath: `//${node.tagName}[@${attr.name}=${xpathLiteral(attr.value)}]`
+        xpath: `//${elementSelector}[@${attr.name}=${xpathLiteral(attr.value)}]`
       });
     }
   }
@@ -532,7 +552,7 @@ function buildXpathSuggestionsForNode(node) {
     suggestions.push({
       label: "By text",
       score: "Medium",
-      xpath: `//${node.tagName}[text()=${xpathLiteral(textValue)}]`
+      xpath: `//${elementSelector}[text()=${xpathLiteral(textValue)}]`
     });
   }
 
@@ -1175,7 +1195,11 @@ generateXpathBtn.addEventListener("click", async () => {
         return;
       }
 
-      const suggestions = buildXpathSuggestionsForNode(targetNode);
+      const mergedNs = {
+        ...(extractNamespacesFromRoot ? extractNamespacesFromRoot(parsed.doc) : {}),
+        ...parseNamespaceInput()
+      };
+      const suggestions = buildXpathSuggestionsForNode(targetNode, mergedNs);
       renderXpathSuggestions(suggestions);
       setMeta(`Generated ${suggestions.length} XPath suggestion(s) from line ${getCursorLineNumber()}.`, "ok");
     },

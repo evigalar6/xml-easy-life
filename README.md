@@ -25,7 +25,7 @@ Key practical advantages:
   - `Re-scan XML` summary (status, root, counts, namespaces)
 - `XPath`
   - Manual namespace map (`prefix=uri`)
-  - `Detect Namespaces From XML`
+  - `Detect Namespaces From XML` (auto-adds `ns=...` alias for default namespace when needed)
   - Cursor-based XPath suggestion generator (`Use` / `Copy`)
   - XPath matcher with scrollable results and copy button
 - `XSD`
@@ -51,7 +51,7 @@ Generator is based on:
 
 Suggestion types include:
 - `Absolute • Fragile`
-- `By tag • Broad`
+- `By tag • Broad` (namespace-aware: uses mapped prefix for namespaced XML)
 - `By local-name • Namespace-safe` (useful for SOAP/namespaced XML)
 - `By attribute • Stable` (namespace declaration attributes are excluded)
 - `By text • Medium`
