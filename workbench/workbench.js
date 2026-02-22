@@ -226,6 +226,12 @@ function setParserErrors(issues) {
   updateErrorNavigation();
 }
 
+function clearEditorSelectionVisuals() {
+  const caret = xmlInput.selectionStart || 0;
+  xmlInput.setSelectionRange(caret, caret);
+  xmlInput.classList.remove("error-focus");
+}
+
 function getLineRange(text, line, fallbackColumn) {
   const lines = text.split("\n");
   let offset = 0;
@@ -934,16 +940,20 @@ validateBtn.addEventListener("click", async () => {
   await withButtonProcessing(
     validateBtn,
     async () => {
-      const xmlText = xmlInput.value.trim();
-      if (!xmlText) {
+      const xmlText = xmlInput.value;
+      if (!xmlText.trim()) {
         setMeta("Paste or upload XML first.", "error");
         return;
       }
 
+      clearEditorSelectionVisuals();
       const parsed = parseXml(xmlText);
       if (!parsed.ok) {
         setParserErrors(parsed.issues);
         setMeta(`Invalid XML: ${parsed.error}`, "error");
+        if (parsed.issues.length > 0) {
+          jumpToParserError(0);
+        }
         return;
       }
 

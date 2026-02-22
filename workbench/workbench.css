@@ -580,6 +580,8 @@ textarea::-webkit-scrollbar-thumb:hover,
   background: linear-gradient(165deg, var(--surface), var(--surface-2));
   box-shadow: var(--shadow);
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .help-header {
@@ -612,7 +614,8 @@ textarea::-webkit-scrollbar-thumb:hover,
 
 .help-body {
   padding: 16px;
-  max-height: calc(100vh - 170px);
+  flex: 1;
+  min-height: 0;
   overflow: auto;
   line-height: 1.6;
   font-size: 15px;
@@ -695,7 +698,6 @@ textarea::-webkit-scrollbar-thumb:hover,
   }
 
   .help-body {
-    max-height: calc(100vh - 130px);
     font-size: 14px;
   }
 
