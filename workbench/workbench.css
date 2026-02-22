@@ -94,7 +94,7 @@ h1 {
   display: grid;
   grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
   gap: 16px;
-  align-items: start;
+  align-items: stretch;
 }
 
 .panel {
@@ -104,6 +104,7 @@ h1 {
   padding: 20px;
   box-shadow: var(--shadow);
   min-width: 0;
+  height: 100%;
 }
 
 .tabs-panel {
@@ -144,7 +145,7 @@ h2 {
   min-height: 0;
   flex: 1;
   min-width: 0;
-  overflow-x: hidden;
+  overflow: visible;
 }
 
 .row {
@@ -429,6 +430,7 @@ label {
   color: var(--text);
   cursor: help;
   outline: none;
+  z-index: 30;
 }
 
 .tooltip-wrap:focus-visible {
@@ -459,7 +461,7 @@ label {
   transform: translateY(-4px);
   pointer-events: none;
   transition: opacity 120ms ease, transform 120ms ease;
-  z-index: 20;
+  z-index: 80;
 }
 
 .tooltip-wrap:hover .tooltip-box,

@@ -519,11 +519,25 @@ function runXsltTransformLite(xmlDoc, xsltDoc, resolver) {
     throw new Error("Unsupported XSLT: missing template with match=\"/\".");
   }
 
+  const stats = {
+    forEachTotal: 0,
+    forEachMatchedNodes: 0,
+    valueOfTotal: 0,
+    valueOfNonEmpty: 0
+  };
+
+  function decodeEscapes(text) {
+    return String(text || "")
+      .replace(/\\r\\n/g, "\n")
+      .replace(/\\n/g, "\n")
+      .replace(/\\t/g, "\t");
+  }
+
   function renderNodes(xsltNodes, contextNode) {
     let out = "";
     for (const node of Array.from(xsltNodes || [])) {
       if (node.nodeType === Node.TEXT_NODE || node.nodeType === Node.CDATA_SECTION_NODE) {
-        out += node.nodeValue || "";
+        out += decodeEscapes(node.nodeValue || "");
         continue;
       }
       if (node.nodeType !== Node.ELEMENT_NODE) {
@@ -539,16 +553,21 @@ function runXsltTransformLite(xmlDoc, xsltDoc, resolver) {
       if (local === "for-each") {
         const select = node.getAttribute("select");
         if (!select) continue;
+        stats.forEachTotal += 1;
         const iterNodes = evaluateXPathAsNodes(select, contextNode, resolver);
+        stats.forEachMatchedNodes += iterNodes.length;
         for (const iterNode of iterNodes) {
           out += renderNodes(node.childNodes, iterNode);
         }
       } else if (local === "value-of") {
         const select = node.getAttribute("select");
         if (!select) continue;
-        out += evaluateXPathAsString(select, contextNode, resolver);
+        stats.valueOfTotal += 1;
+        const value = evaluateXPathAsString(select, contextNode, resolver);
+        if (value) stats.valueOfNonEmpty += 1;
+        out += value;
       } else if (local === "text") {
-        out += node.textContent || "";
+        out += decodeEscapes(node.textContent || "");
       } else if (local === "if") {
         const testExpr = node.getAttribute("test");
         if (!testExpr) continue;
@@ -562,7 +581,7 @@ function runXsltTransformLite(xmlDoc, xsltDoc, resolver) {
   }
 
   const rendered = renderNodes(rootTemplate.childNodes, xmlDoc);
-  return rendered;
+  return { output: rendered, stats };
 }
 
 function evaluateXpath() {
@@ -788,8 +807,17 @@ function runXsltTransform() {
     const xsltNs = extractNamespacesFromDocumentRoot(parsedXslt.doc);
     const mergedNs = { ...xmlNs, ...xsltNs, ...userNs };
     const resolver = (prefix) => mergedNs[prefix] || null;
-    const output = runXsltTransformLite(parsedXml.doc, parsedXslt.doc, resolver);
-    setXsltOutputContent(output || "Transform produced empty output.", true);
+    const transformed = runXsltTransformLite(parsedXml.doc, parsedXslt.doc, resolver);
+    setXsltOutputContent(transformed.output || "Transform produced empty output.", true);
+
+    if (transformed.stats.forEachTotal > 0 && transformed.stats.forEachMatchedNodes === 0) {
+      setMeta(
+        "Transform ran, but XSLT selectors matched 0 nodes. Check XML/XSLT namespaces or element paths.",
+        "error"
+      );
+      return;
+    }
+
     setMeta("XSLT transform completed (JS engine).", "ok");
   } catch (error) {
     setXsltOutputContent("", false);
