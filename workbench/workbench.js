@@ -7,6 +7,7 @@ const results = document.getElementById("results");
 const copyResultsBtn = document.getElementById("copyResultsBtn");
 const meta = document.getElementById("meta");
 const xsdMeta = document.getElementById("xsdMeta");
+const xsdFileInfo = document.getElementById("xsdFileInfo");
 const fileInput = document.getElementById("fileInput");
 const loadFromTabBtn = document.getElementById("loadFromTabBtn");
 const xsdFileInput = document.getElementById("xsdFileInput");
@@ -69,6 +70,7 @@ let isFormattedView = false;
 let originalXmlSnapshot = "";
 let recentItems = [];
 let hasUserChangedTab = false;
+let lastCursorOffset = 0;
 let xsdState = {
   name: "",
   text: "",
@@ -99,6 +101,11 @@ function setMeta(message, kind = "") {
 function setXsdMeta(message, kind = "") {
   xsdMeta.textContent = message;
   xsdMeta.className = `meta ${kind}`.trim();
+}
+
+function setXsdFileInfo(message, kind = "") {
+  xsdFileInfo.textContent = message;
+  xsdFileInfo.className = `meta ${kind}`.trim();
 }
 
 function resetFormatToggle() {
@@ -216,6 +223,16 @@ function syncLineNumberScroll() {
   lineNumbers.scrollTop = xmlInput.scrollTop;
 }
 
+function getEffectiveCursorOffset() {
+  const raw = typeof xmlInput.selectionStart === "number" ? xmlInput.selectionStart : lastCursorOffset;
+  const safe = Number.isFinite(raw) ? raw : 0;
+  return Math.max(0, Math.min(xmlInput.value.length, safe));
+}
+
+function rememberCursorOffset() {
+  lastCursorOffset = getEffectiveCursorOffset();
+}
+
 function updateErrorNavigation() {
   const hasErrors = parserErrors.length > 0;
   errorNavRow.hidden = !hasErrors;
@@ -242,7 +259,7 @@ function setParserErrors(issues) {
 }
 
 function clearEditorSelectionVisuals() {
-  const caret = xmlInput.selectionStart || 0;
+  const caret = getEffectiveCursorOffset();
   xmlInput.setSelectionRange(caret, caret);
   xmlInput.classList.remove("error-focus");
 }
@@ -274,6 +291,7 @@ function jumpToParserError(index) {
   const lineRange = getLineRange(xmlInput.value, issue.line, issue.column);
   xmlInput.focus();
   xmlInput.setSelectionRange(lineRange.start, lineRange.end);
+  rememberCursorOffset();
   xmlInput.classList.add("error-focus");
   setTimeout(() => xmlInput.classList.remove("error-focus"), 900);
 
@@ -328,7 +346,7 @@ function documentToString(doc) {
 }
 
 function getCursorLineNumber() {
-  const offset = xmlInput.selectionStart || 0;
+  const offset = getEffectiveCursorOffset();
   return xmlInput.value.slice(0, offset).split("\n").length;
 }
 
@@ -751,6 +769,7 @@ function setXmlContent(xmlText) {
   xmlInput.value = xmlText;
   updateLineNumbers();
   syncLineNumberScroll();
+  lastCursorOffset = Math.min(lastCursorOffset, xmlInput.value.length);
   clearXpathSuggestions();
   resetFormatToggle();
   setParserErrors([]);
@@ -814,6 +833,9 @@ async function loadXmlFromActiveTabInPlace() {
 }
 
 function runBasicXsdValidation() {
+  const schemaName = xsdState.name || "No schema";
+  setXsdMeta(`Validation in progress (${schemaName})...`);
+
   if (!xsdState.text || !xsdState.rules) {
     setXsdMeta("Upload a valid XSD first.", "error");
     return;
@@ -827,9 +849,9 @@ function runBasicXsdValidation() {
 
   const outcome = validateXmlAgainstBasicXsdRules(parsedXml.doc, xsdState.rules);
   if (outcome.ok) {
-    setXsdMeta(outcome.summary, "ok");
+    setXsdMeta(`[${xsdState.name}] ${outcome.summary}`, "ok");
   } else {
-    setXsdMeta(`${outcome.summary} ${outcome.details.join(" ")}`.trim(), "error");
+    setXsdMeta(`[${xsdState.name}] ${outcome.summary} ${outcome.details.join(" ")}`.trim(), "error");
   }
 }
 
@@ -1039,8 +1061,9 @@ generateXpathBtn.addEventListener("click", async () => {
         return;
       }
 
+      rememberCursorOffset();
       const pathStack = inferElementPathFromCursor
-        ? inferElementPathFromCursor(xmlText, xmlInput.selectionStart || 0)
+        ? inferElementPathFromCursor(xmlText, lastCursorOffset)
         : [];
       const targetNode = getRepresentativeNode(parsed.doc, pathStack);
       if (!targetNode) {
@@ -1141,12 +1164,16 @@ xsdFileInput.addEventListener("change", () => {
   const file = xsdFileInput.files?.[0];
   if (!file) return;
 
+  setXsdFileInfo(`Selected XSD: ${file.name}`);
+  setXsdMeta("Validation not run yet.");
+
   const reader = new FileReader();
   reader.onload = () => {
     const text = String(reader.result || "");
     const parsed = parseXml(text);
     if (!parsed.ok) {
       xsdState = { name: "", text: "", rules: null };
+      setXsdFileInfo(`Selected XSD: ${file.name} (invalid)`, "error");
       setXsdMeta(`XSD invalid: ${parsed.error}`, "error");
       return;
     }
@@ -1159,12 +1186,16 @@ xsdFileInput.addEventListener("change", () => {
     };
 
     if (!rules.supported) {
-      setXsdMeta(`Loaded ${file.name}, but limited checks unavailable: ${rules.reason}`, "error");
+      setXsdFileInfo(`Loaded XSD: ${file.name}`, "ok");
+      setXsdMeta(`Loaded, but limited checks unavailable: ${rules.reason}`, "error");
     } else {
-      setXsdMeta(`Loaded ${file.name}. Ready for basic XSD checks.`, "ok");
+      setXsdFileInfo(`Loaded XSD: ${file.name}`, "ok");
+      setXsdMeta("Ready for basic XSD checks.", "ok");
     }
   };
   reader.onerror = () => {
+    xsdState = { name: "", text: "", rules: null };
+    setXsdFileInfo("No XSD loaded.", "error");
     setXsdMeta("Could not read XSD file.", "error");
   };
   reader.readAsText(file);
@@ -1186,6 +1217,7 @@ xsltFileInput.addEventListener("change", () => {
 });
 
 xmlInput.addEventListener("input", () => {
+  rememberCursorOffset();
   updateLineNumbers();
   refreshInspectorSummary();
   clearXpathSuggestions();
@@ -1193,6 +1225,9 @@ xmlInput.addEventListener("input", () => {
   setParserErrors([]);
 });
 
+xmlInput.addEventListener("click", rememberCursorOffset);
+xmlInput.addEventListener("keyup", rememberCursorOffset);
+xmlInput.addEventListener("select", rememberCursorOffset);
 xmlInput.addEventListener("scroll", syncLineNumberScroll);
 
 prevErrorBtn.addEventListener("click", () => {
