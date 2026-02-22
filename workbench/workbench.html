@@ -143,10 +143,16 @@
           <textarea id="xsltInput" class="xslt-input" wrap="off" spellcheck="false" placeholder="Paste XSLT stylesheet here..."></textarea>
           <div class="results-header transform-header">
             <h3>Transform Output</h3>
-            <button id="copyXsltOutputBtn" class="ghost copy-results-btn" hidden aria-label="Copy transform output">
-              <span class="clip-glyph" aria-hidden="true">📋</span>
-              Copy
-            </button>
+            <div class="output-actions">
+              <button id="downloadXsltOutputBtn" class="ghost copy-results-btn" hidden aria-label="Download transform output">
+                <span class="clip-glyph" aria-hidden="true">⬇</span>
+                Download
+              </button>
+              <button id="copyXsltOutputBtn" class="ghost copy-results-btn" hidden aria-label="Copy transform output">
+                <span class="clip-glyph" aria-hidden="true">📋</span>
+                Copy
+              </button>
+            </div>
           </div>
           <pre id="xsltOutput" class="results xslt-output">No transform yet.</pre>
         </div>

@@ -397,6 +397,12 @@ label {
   margin: 0;
 }
 
+.output-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .copy-results-btn {
   min-height: 34px;
   padding: 7px 10px;

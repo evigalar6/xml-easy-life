@@ -15,6 +15,7 @@ const xsltFileInput = document.getElementById("xsltFileInput");
 const xsltInput = document.getElementById("xsltInput");
 const xsltOutput = document.getElementById("xsltOutput");
 const copyXsltOutputBtn = document.getElementById("copyXsltOutputBtn");
+const downloadXsltOutputBtn = document.getElementById("downloadXsltOutputBtn");
 const runXsltBtn = document.getElementById("runXsltBtn");
 const root = document.documentElement;
 const helpBtn = document.getElementById("helpBtn");
@@ -123,9 +124,23 @@ function setResultsContent(text, showCopy = false) {
   copyResultsBtn.hidden = !showCopy;
 }
 
-function setXsltOutputContent(text, showCopy = false) {
+function setXsltOutputContent(text, showActions = false) {
   xsltOutput.textContent = text;
-  copyXsltOutputBtn.hidden = !showCopy;
+  copyXsltOutputBtn.hidden = !showActions;
+  downloadXsltOutputBtn.hidden = !showActions;
+}
+
+function downloadTextFile(content, filename) {
+  const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.style.display = "none";
+  document.body.appendChild(anchor);
+  anchor.click();
+  document.body.removeChild(anchor);
+  setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
 function getTabConfig() {
@@ -1216,6 +1231,20 @@ copyXsltOutputBtn.addEventListener("click", async () => {
     setMeta("Transform output copied to clipboard.", "ok");
   } catch (_error) {
     setMeta("Could not copy transform output in this context.", "error");
+  }
+});
+
+downloadXsltOutputBtn.addEventListener("click", () => {
+  const output = xsltOutput.textContent.trim();
+  if (!output) return;
+  try {
+    const isXml = output.startsWith("<");
+    const suffix = isXml ? "xml" : "txt";
+    const filename = `xslt-transform-output.${suffix}`;
+    downloadTextFile(output, filename);
+    setMeta(`Transform output downloaded as ${filename}.`, "ok");
+  } catch (_error) {
+    setMeta("Could not download transform output in this context.", "error");
   }
 });
 
