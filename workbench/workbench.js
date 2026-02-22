@@ -88,17 +88,6 @@ const SAMPLE_XML = `<?xml version="1.0" encoding="UTF-8"?>
   </book>
 </catalog>`;
 
-const SAMPLE_XSLT = `<?xml version="1.0" encoding="UTF-8"?>
-<xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
-  <xsl:output method="text" omit-xml-declaration="yes" />
-  <xsl:template match="/">
-    <xsl:for-each select="//book">
-- <xsl:value-of select="title" />
-
-    </xsl:for-each>
-  </xsl:template>
-</xsl:stylesheet>`;
-
 function setMeta(message, kind = "") {
   meta.textContent = message;
   meta.className = `meta ${kind}`.trim();
@@ -752,7 +741,6 @@ loadSampleBtn.addEventListener("click", async () => {
     async () => {
       setXmlContent(formatXml(SAMPLE_XML));
       namespaceInput.value = "";
-      xsltInput.value = SAMPLE_XSLT;
       setResultsContent("Sample loaded.", false);
       setMeta("Sample XML loaded.", "ok");
       await addRecentXmlItem("Sample XML", xmlInput.value, "sample");
@@ -1089,10 +1077,6 @@ loadPendingXml().catch((error) => {
   setMeta(`Failed to load startup data: ${error.message}`, "error");
 });
 
-if (!xsltInput.value.trim()) {
-  xsltInput.value = SAMPLE_XSLT;
-}
-
 updateLineNumbers();
 syncLineNumberScroll();
 refreshInspectorSummary();
@@ -1101,4 +1085,3 @@ resetFormatToggle();
 setResultsContent(results.textContent || "No query yet.", false);
 setXsltOutputContent(xsltOutput.textContent || "No transform yet.", false);
 updateErrorNavigation();
-setActiveTab("inspector");

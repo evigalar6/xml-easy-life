@@ -107,6 +107,7 @@ h1 {
 .tabs-panel {
   display: flex;
   flex-direction: column;
+  min-height: 640px;
 }
 
 h2 {
@@ -139,6 +140,7 @@ h2 {
 
 .tab-panel {
   min-height: 0;
+  flex: 1;
 }
 
 .row {
@@ -669,6 +671,10 @@ textarea::-webkit-scrollbar-thumb:hover,
 
   .help-body h3 {
     font-size: 17px;
+  }
+
+  .tabs-panel {
+    min-height: 0;
   }
 
   .results {
