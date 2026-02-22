@@ -2,6 +2,19 @@
 
 XML Easy Life is a Chrome extension for practical XML workflows: inspect and validate XML, generate and run XPath (including namespace-aware SOAP cases), run lightweight XSD checks, and preview/download XSLT transform output.
 
+## Why This Tool Is Useful
+
+Most XML workflows are split across multiple tools: browser tabs, online XPath testers, desktop XML editors, and manual copy-paste between them. XML Easy Life keeps the core workflow in one lightweight extension UI.
+
+Key practical advantages:
+- Single workspace for `Inspector`, `XPath`, `XSD`, and `XSLT`
+- Fast “load -> inspect -> query -> validate -> transform” loop with less context switching
+- Namespace-aware XPath workflow that is friendlier for SOAP/Atom/default-namespace XML
+- Cursor-based XPath generation to speed up routine selector building
+- Built-in parser error navigation and editor line numbers for quicker debugging
+- Local-file friendly workflow (upload, recent history, copy/download outputs)
+- Lightweight and browser-native, without requiring a heavyweight desktop XML suite
+
 ## Feature Overview
 
 ### Tabs
