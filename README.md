@@ -54,6 +54,7 @@ Suggestion types include:
 - `By tag • Broad` (namespace-aware: uses mapped prefix for namespaced XML)
 - `By local-name • Namespace-safe` (useful for SOAP/namespaced XML)
 - `By attribute • Stable` (namespace declaration attributes are excluded)
+- `By text node • Practical` (returns text values directly via `/text()`)
 - `By text • Medium`
 
 Ambiguity may happen when cursor is on whitespace between siblings, outside root scope, or XML is invalid.

@@ -604,7 +604,16 @@ function buildXpathSuggestionsForNode(node, namespaceMap = {}) {
   }
 
   const textValue = (node.textContent || "").trim().replace(/\s+/g, " ");
-  if (textValue && textValue.length <= 80 && node.children.length === 0 && xpathLiteral) {
+  const isLeafElement = node.children.length === 0;
+  if (textValue && isLeafElement) {
+    suggestions.push({
+      label: "By text node",
+      score: "Practical",
+      xpath: `//${elementSelector}/text()`
+    });
+  }
+
+  if (textValue && textValue.length <= 80 && isLeafElement && xpathLiteral) {
     suggestions.push({
       label: "By text",
       score: "Medium",
@@ -616,7 +625,7 @@ function buildXpathSuggestionsForNode(node, namespaceMap = {}) {
   for (const item of suggestions) {
     if (!unique.has(item.xpath)) unique.set(item.xpath, item);
   }
-  return [...unique.values()].slice(0, 5);
+  return [...unique.values()].slice(0, 6);
 }
 
 function renderXpathSuggestions(items) {
