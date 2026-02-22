@@ -50,6 +50,13 @@
         <label for="xpathInput">XPath expression</label>
         <input id="xpathInput" type="text" placeholder="//book/title/text()" />
         <button id="runXpath" class="button-row-single">Run XPath</button>
+        <div class="row button-row xpath-gen-row">
+          <button id="generateXpathBtn" class="ghost">Generate XPath From Cursor</button>
+        </div>
+        <div id="xpathSuggestions" class="xpath-suggestions" hidden>
+          <p class="suggestions-title">Suggestions</p>
+          <div id="xpathSuggestionsList"></div>
+        </div>
 
         <h3>Results</h3>
         <pre id="results" class="results">No query yet.</pre>

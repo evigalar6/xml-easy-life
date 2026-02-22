@@ -10,6 +10,9 @@ const loadSampleBtn = document.getElementById("loadSample");
 const formatBtn = document.getElementById("formatBtn");
 const validateBtn = document.getElementById("validateBtn");
 const runXpathBtn = document.getElementById("runXpath");
+const generateXpathBtn = document.getElementById("generateXpathBtn");
+const xpathSuggestions = document.getElementById("xpathSuggestions");
+const xpathSuggestionsList = document.getElementById("xpathSuggestionsList");
 const errorNavRow = document.getElementById("errorNavRow");
 const jumpErrorBtn = document.getElementById("jumpErrorBtn");
 const prevErrorBtn = document.getElementById("prevErrorBtn");
@@ -18,6 +21,8 @@ const errorNavInfo = document.getElementById("errorNavInfo");
 
 let parserErrors = [];
 let activeParserErrorIndex = -1;
+let isFormattedView = false;
+let originalXmlSnapshot = "";
 
 const SAMPLE_XML = `<?xml version="1.0" encoding="UTF-8"?>
 <catalog>
@@ -38,6 +43,24 @@ const SAMPLE_XML = `<?xml version="1.0" encoding="UTF-8"?>
 function setMeta(message, kind = "") {
   meta.textContent = message;
   meta.className = `meta ${kind}`.trim();
+}
+
+function resetFormatToggle() {
+  isFormattedView = false;
+  originalXmlSnapshot = "";
+  formatBtn.textContent = "Format XML";
+  formatBtn.setAttribute("aria-pressed", "false");
+}
+
+function setFormatToggleActive() {
+  isFormattedView = true;
+  formatBtn.textContent = "Show Original XML";
+  formatBtn.setAttribute("aria-pressed", "true");
+}
+
+function clearXpathSuggestions() {
+  xpathSuggestions.hidden = true;
+  xpathSuggestionsList.innerHTML = "";
 }
 
 function updateLineNumbers() {
@@ -179,6 +202,173 @@ function documentToString(doc) {
   return new XMLSerializer().serializeToString(doc);
 }
 
+function getCursorLineNumber() {
+  const offset = xmlInput.selectionStart || 0;
+  return xmlInput.value.slice(0, offset).split("\n").length;
+}
+
+function inferElementPathFromCursor(xmlText, cursorOffset) {
+  const snippet = xmlText.slice(0, cursorOffset);
+  const stack = [];
+  const tagRegex = /<\/?([A-Za-z_][\w:.-]*)(\s[^<>]*)?>/g;
+  let match = tagRegex.exec(snippet);
+  while (match) {
+    const fullTag = match[0];
+    const tagName = match[1];
+    const isClosing = fullTag.startsWith("</");
+    const isSelfClosing = /\/>\s*$/.test(fullTag);
+    if (isClosing) {
+      if (stack.length > 0 && stack[stack.length - 1] === tagName) {
+        stack.pop();
+      }
+    } else if (!isSelfClosing) {
+      stack.push(tagName);
+    }
+    match = tagRegex.exec(snippet);
+  }
+  return stack;
+}
+
+function xpathLiteral(value) {
+  if (!value.includes("'")) {
+    return `'${value}'`;
+  }
+  if (!value.includes('"')) {
+    return `"${value}"`;
+  }
+  const parts = value.split("'");
+  return `concat('${parts.join(`', "'", '`)}')`;
+}
+
+function buildAbsoluteIndexedXPath(node) {
+  if (!node || node.nodeType !== Node.ELEMENT_NODE) {
+    return "";
+  }
+  const segments = [];
+  let current = node;
+  while (current && current.nodeType === Node.ELEMENT_NODE) {
+    let index = 1;
+    let sibling = current.previousElementSibling;
+    while (sibling) {
+      if (sibling.tagName === current.tagName) {
+        index += 1;
+      }
+      sibling = sibling.previousElementSibling;
+    }
+    segments.unshift(`${current.tagName}[${index}]`);
+    current = current.parentElement;
+  }
+  return `/${segments.join("/")}`;
+}
+
+function getRepresentativeNode(doc, pathStack) {
+  if (!pathStack.length) {
+    return doc.documentElement;
+  }
+  const absolutePath = `/${pathStack.join("/")}`;
+  const fromPath = doc.evaluate(absolutePath, doc, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null)
+    .singleNodeValue;
+  if (fromPath) return fromPath;
+  const fallbackTag = pathStack[pathStack.length - 1];
+  return doc.evaluate(`//${fallbackTag}`, doc, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null)
+    .singleNodeValue;
+}
+
+function buildXpathSuggestionsForNode(node) {
+  const suggestions = [];
+  if (!node || node.nodeType !== Node.ELEMENT_NODE) {
+    return suggestions;
+  }
+
+  const absolute = buildAbsoluteIndexedXPath(node);
+  if (absolute) {
+    suggestions.push({
+      label: "Absolute",
+      score: "Fragile",
+      xpath: absolute
+    });
+  }
+
+  suggestions.push({
+    label: "By tag",
+    score: "Broad",
+    xpath: `//${node.tagName}`
+  });
+
+  if (node.attributes && node.attributes.length > 0) {
+    const attr = node.attributes[0];
+    suggestions.push({
+      label: "By attribute",
+      score: "Stable",
+      xpath: `//${node.tagName}[@${attr.name}=${xpathLiteral(attr.value)}]`
+    });
+  }
+
+  const textValue = (node.textContent || "").trim().replace(/\s+/g, " ");
+  if (textValue && textValue.length <= 80 && node.children.length === 0) {
+    suggestions.push({
+      label: "By text",
+      score: "Medium",
+      xpath: `//${node.tagName}[text()=${xpathLiteral(textValue)}]`
+    });
+  }
+
+  const unique = new Map();
+  for (const item of suggestions) {
+    if (!unique.has(item.xpath)) {
+      unique.set(item.xpath, item);
+    }
+  }
+  return [...unique.values()].slice(0, 4);
+}
+
+function renderXpathSuggestions(items) {
+  xpathSuggestionsList.innerHTML = "";
+  if (!items.length) {
+    clearXpathSuggestions();
+    return;
+  }
+
+  for (const item of items) {
+    const row = document.createElement("div");
+    row.className = "xpath-suggestion-item";
+
+    const code = document.createElement("code");
+    code.textContent = `${item.label} • ${item.score}: ${item.xpath}`;
+
+    const actions = document.createElement("div");
+    actions.className = "xpath-suggestion-actions";
+
+    const useBtn = document.createElement("button");
+    useBtn.className = "ghost";
+    useBtn.textContent = "Use";
+    useBtn.addEventListener("click", () => {
+      xpathInput.value = item.xpath;
+      setMeta("XPath inserted into input.", "ok");
+    });
+
+    const copyBtn = document.createElement("button");
+    copyBtn.className = "ghost";
+    copyBtn.textContent = "Copy";
+    copyBtn.addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(item.xpath);
+        setMeta("XPath copied.", "ok");
+      } catch (_error) {
+        setMeta("Clipboard copy failed in this context.", "error");
+      }
+    });
+
+    actions.appendChild(useBtn);
+    actions.appendChild(copyBtn);
+    row.appendChild(code);
+    row.appendChild(actions);
+    xpathSuggestionsList.appendChild(row);
+  }
+
+  xpathSuggestions.hidden = false;
+}
+
 function stringifyXPathResult(node) {
   if (node.nodeType === Node.ATTRIBUTE_NODE) {
     return `@${node.nodeName}="${node.nodeValue}"`;
@@ -262,7 +452,9 @@ async function withButtonProcessing(button, task, label = "Processing...") {
     button.disabled = false;
     button.classList.remove("is-processing");
     button.removeAttribute("aria-busy");
-    button.textContent = previousLabel;
+    if (button.textContent === label) {
+      button.textContent = previousLabel;
+    }
   }
 }
 
@@ -278,6 +470,8 @@ loadSampleBtn.addEventListener("click", async () => {
       xmlInput.value = formatXml(SAMPLE_XML);
       updateLineNumbers();
       syncLineNumberScroll();
+      clearXpathSuggestions();
+      resetFormatToggle();
       setParserErrors([]);
       results.textContent = "Sample loaded.";
       setMeta("Sample XML loaded.", "ok");
@@ -290,12 +484,20 @@ formatBtn.addEventListener("click", async () => {
   await withButtonProcessing(
     formatBtn,
     async () => {
-      const xmlText = xmlInput.value.trim();
-      if (!xmlText) {
-        setMeta("Nothing to format yet.", "error");
+      if (isFormattedView) {
+        xmlInput.value = originalXmlSnapshot;
+        updateLineNumbers();
+        syncLineNumberScroll();
+        resetFormatToggle();
+        setMeta("Original XML restored.", "ok");
         return;
       }
 
+      const xmlText = xmlInput.value;
+      if (!xmlText.trim()) {
+        setMeta("Nothing to format yet.", "error");
+        return;
+      }
       const parsed = parseXml(xmlText);
       if (!parsed.ok) {
         setParserErrors([]);
@@ -303,13 +505,16 @@ formatBtn.addEventListener("click", async () => {
         return;
       }
 
+      originalXmlSnapshot = xmlInput.value;
       xmlInput.value = formatXml(documentToString(parsed.doc));
       updateLineNumbers();
       syncLineNumberScroll();
+      clearXpathSuggestions();
+      setFormatToggleActive();
       setParserErrors([]);
       setMeta("XML formatted successfully.", "ok");
     },
-    "Formatting..."
+    isFormattedView ? "Restoring..." : "Formatting..."
   );
 });
 
@@ -343,6 +548,43 @@ runXpathBtn.addEventListener("click", async () => {
   }, "Running...");
 });
 
+generateXpathBtn.addEventListener("click", async () => {
+  await withButtonProcessing(
+    generateXpathBtn,
+    async () => {
+      const xmlText = xmlInput.value;
+      if (!xmlText.trim()) {
+        clearXpathSuggestions();
+        setMeta("Paste or upload XML first.", "error");
+        return;
+      }
+
+      const parsed = parseXml(xmlText);
+      if (!parsed.ok) {
+        clearXpathSuggestions();
+        setMeta(`Invalid XML: ${parsed.error}`, "error");
+        return;
+      }
+
+      const pathStack = inferElementPathFromCursor(xmlText, xmlInput.selectionStart || 0);
+      const targetNode = getRepresentativeNode(parsed.doc, pathStack);
+      if (!targetNode) {
+        clearXpathSuggestions();
+        setMeta("No element found at the current cursor location.", "error");
+        return;
+      }
+
+      const suggestions = buildXpathSuggestionsForNode(targetNode);
+      renderXpathSuggestions(suggestions);
+      setMeta(
+        `Generated ${suggestions.length} XPath suggestion(s) from line ${getCursorLineNumber()}.`,
+        "ok"
+      );
+    },
+    "Generating..."
+  );
+});
+
 fileInput.addEventListener("change", () => {
   const file = fileInput.files?.[0];
   if (!file) return;
@@ -353,6 +595,8 @@ fileInput.addEventListener("change", () => {
     xmlInput.value = text;
     updateLineNumbers();
     syncLineNumberScroll();
+    clearXpathSuggestions();
+    resetFormatToggle();
     setParserErrors([]);
     setMeta(`Loaded file: ${file.name}`, "ok");
     results.textContent = "File loaded. Run Validate or XPath.";
@@ -365,6 +609,8 @@ fileInput.addEventListener("change", () => {
 
 xmlInput.addEventListener("input", () => {
   updateLineNumbers();
+  clearXpathSuggestions();
+  resetFormatToggle();
   // Input changed, older parser issues may no longer match current content.
   setParserErrors([]);
 });
@@ -405,6 +651,8 @@ async function loadPendingXml() {
   xmlInput.value = payload.xml;
   updateLineNumbers();
   syncLineNumberScroll();
+  clearXpathSuggestions();
+  resetFormatToggle();
   setParserErrors([]);
   setMeta(`Loaded XML from tab: ${payload.source}`, "ok");
   results.textContent = `Loaded ${payload.loadedAt}.`;
@@ -418,4 +666,6 @@ loadPendingXml().catch((error) => {
 
 updateLineNumbers();
 syncLineNumberScroll();
+clearXpathSuggestions();
+resetFormatToggle();
 updateErrorNavigation();

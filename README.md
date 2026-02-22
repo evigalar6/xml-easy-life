@@ -7,8 +7,9 @@ XML Easy Life is a lightweight Chrome extension workbench for interview prep and
 - Upload local `.xml` files
 - Load XML from the current active tab
 - Validate XML well-formedness
-- Format XML for readability
+- Format XML for readability with a reversible toggle (`Format XML` / `Show Original XML`)
 - Run XPath queries and inspect matching results
+- Generate XPath suggestions from current cursor context (`Use` / `Copy`)
 - Code-area style XML input with line numbers
 - Parser-aware error navigation (`Prev Error` / `Next Error`) with line+column jump
 - Visible custom scrollbars for editor and results panels
