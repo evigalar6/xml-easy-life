@@ -2,7 +2,7 @@
 
 XML Easy Life is a lightweight Chrome extension workbench for interview prep and day-to-day XML debugging.
 
-## What you can do
+## What it does
 
 - Upload local `.xml` files
 - Load XML from the current active tab
