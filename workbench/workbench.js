@@ -534,6 +534,14 @@ function setNamespaceInputFromMap(map) {
   namespaceInput.value = keys.map((prefix) => `${prefix}=${map[prefix]}`).join("\n");
 }
 
+function pickDefaultNamespaceAlias(map) {
+  const base = "ns";
+  if (!map[base]) return base;
+  let i = 1;
+  while (map[`${base}${i}`]) i += 1;
+  return `${base}${i}`;
+}
+
 function buildNamespaceResolver(doc, userMap) {
   const autoMap = extractNamespacesFromRoot ? extractNamespacesFromRoot(doc) : {};
   const merged = { ...autoMap, ...userMap };
@@ -1100,10 +1108,15 @@ detectNsBtn.addEventListener("click", async () => {
       const defaultNs = detected[""];
       if (defaultNs) {
         delete detected[""];
+        const hasAliasForDefault = Object.values(detected).some((uri) => uri === defaultNs);
+        if (!hasAliasForDefault) {
+          const alias = pickDefaultNamespaceAlias(detected);
+          detected[alias] = defaultNs;
+        }
       }
       setNamespaceInputFromMap(detected);
       if (defaultNs) {
-        setMeta("Detected namespace prefixes. XML has a default namespace too.", "ok");
+        setMeta("Detected namespaces. Added a prefix alias for default namespace.", "ok");
       } else {
         setMeta("Detected namespace prefixes from XML root.", "ok");
       }
