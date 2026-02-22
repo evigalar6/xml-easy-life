@@ -13,7 +13,10 @@
         <h1>Inspect, Validate, and Query</h1>
         <p class="subtitle">Upload your XML file or paste raw XML, then test XPath in seconds.</p>
       </div>
-      <button id="themeToggle" class="ghost" aria-label="Toggle theme">Toggle Theme</button>
+      <div class="hero-actions">
+        <button id="helpBtn" class="ghost" aria-label="Open help">How To Use This Tool</button>
+        <button id="themeToggle" class="ghost" aria-label="Toggle theme">Toggle Theme</button>
+      </div>
     </header>
 
     <main class="layout">
@@ -73,10 +76,65 @@
           <div id="xpathSuggestionsList"></div>
         </div>
 
-        <h3>Results</h3>
+        <div class="results-header">
+          <h3>Results</h3>
+          <button id="copyResultsBtn" class="ghost copy-results-btn" hidden aria-label="Copy results">
+            <span class="clip-glyph" aria-hidden="true">📋</span>
+            Copy
+          </button>
+        </div>
         <pre id="results" class="results">No query yet.</pre>
       </section>
     </main>
+
+    <div id="helpModal" class="help-modal" hidden>
+      <div id="helpBackdrop" class="help-backdrop"></div>
+      <section class="help-panel" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
+        <div class="help-header">
+          <h2 id="helpTitle">XML Easy Life Help</h2>
+          <button id="closeHelpBtn" class="ghost" aria-label="Close help">Close</button>
+        </div>
+        <div class="help-body">
+          <h3>Quick Start</h3>
+          <ol>
+            <li>Upload XML or load XML from current tab.</li>
+            <li>Use Validate to check well-formedness.</li>
+            <li>Run XPath queries in the tester panel.</li>
+            <li>Use Generate XPath From Cursor for suggestions.</li>
+          </ol>
+
+          <h3>XPath Suggestion Types</h3>
+          <ul>
+            <li><strong>Absolute • Fragile</strong>: exact indexed path. Precise but breaks if structure changes.</li>
+            <li><strong>By tag • Broad</strong>: matches all nodes with tag name.</li>
+            <li><strong>By attribute • Stable</strong>: best when attribute is unique.</li>
+            <li><strong>By text • Medium</strong>: useful but text changes can break it.</li>
+          </ul>
+
+          <h3>How Generator Works</h3>
+          <ul>
+            <li>Needs well-formed XML.</li>
+            <li>Uses current cursor position.</li>
+            <li>Infers context from open tag stack before cursor.</li>
+          </ul>
+
+          <h3>Ambiguity Cases</h3>
+          <ul>
+            <li>Cursor on whitespace between sibling elements.</li>
+            <li>Cursor before root element or after document end.</li>
+            <li>Invalid XML.</li>
+          </ul>
+          <p>In ambiguous cases, generator may fall back to a nearby or root element.</p>
+
+          <h3>Editor & Validation Notes</h3>
+          <ul>
+            <li>Editor is internally scrollable with line numbers.</li>
+            <li>Format button toggles between formatted and original XML.</li>
+            <li>Error controls appear only after validation errors are found.</li>
+          </ul>
+        </div>
+      </section>
+    </div>
 
     <script src="workbench.js"></script>
   </body>

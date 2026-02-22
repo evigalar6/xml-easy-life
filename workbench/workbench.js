@@ -5,11 +5,16 @@ const results = document.getElementById("results");
 const meta = document.getElementById("meta");
 const fileInput = document.getElementById("fileInput");
 const root = document.documentElement;
+const helpBtn = document.getElementById("helpBtn");
+const helpModal = document.getElementById("helpModal");
+const closeHelpBtn = document.getElementById("closeHelpBtn");
+const helpBackdrop = document.getElementById("helpBackdrop");
 const themeToggleBtn = document.getElementById("themeToggle");
 const loadSampleBtn = document.getElementById("loadSample");
 const formatBtn = document.getElementById("formatBtn");
 const validateBtn = document.getElementById("validateBtn");
 const runXpathBtn = document.getElementById("runXpath");
+const copyResultsBtn = document.getElementById("copyResultsBtn");
 const generateXpathBtn = document.getElementById("generateXpathBtn");
 const xpathSuggestions = document.getElementById("xpathSuggestions");
 const xpathSuggestionsList = document.getElementById("xpathSuggestionsList");
@@ -61,6 +66,11 @@ function setFormatToggleActive() {
 function clearXpathSuggestions() {
   xpathSuggestions.hidden = true;
   xpathSuggestionsList.innerHTML = "";
+}
+
+function setResultsContent(text, showCopy = false) {
+  results.textContent = text;
+  copyResultsBtn.hidden = !showCopy;
 }
 
 function updateLineNumbers() {
@@ -394,6 +404,7 @@ function evaluateXpath() {
   const parsed = parseXml(xmlText);
   if (!parsed.ok) {
     setParserErrors([]);
+    setResultsContent("", false);
     setMeta(`Invalid XML: ${parsed.error}`, "error");
     return;
   }
@@ -411,15 +422,15 @@ function evaluateXpath() {
     }
 
     if (output.length === 0) {
-      results.textContent = "No nodes matched.";
+      setResultsContent("No nodes matched.", true);
       setMeta("XPath executed successfully.", "ok");
       return;
     }
 
-    results.textContent = output.join("\n\n");
+    setResultsContent(output.join("\n\n"), true);
     setMeta(`XPath matched ${output.length} node(s).`, "ok");
   } catch (error) {
-    results.textContent = "";
+    setResultsContent("", false);
     setMeta(`XPath error: ${error.message}`, "error");
   }
 }
@@ -428,6 +439,16 @@ function setTheme(theme) {
   root.dataset.theme = theme;
   themeToggleBtn.setAttribute("aria-pressed", String(theme === "dark"));
   chrome.storage.local.set({ themePreference: theme });
+}
+
+function openHelpModal() {
+  helpModal.hidden = false;
+  document.body.style.overflow = "hidden";
+}
+
+function closeHelpModal() {
+  helpModal.hidden = true;
+  document.body.style.overflow = "";
 }
 
 function waitForPaint() {
@@ -463,6 +484,24 @@ themeToggleBtn.addEventListener("click", async () => {
   setTheme(current === "dark" ? "light" : "dark");
 });
 
+helpBtn.addEventListener("click", () => {
+  openHelpModal();
+});
+
+closeHelpBtn.addEventListener("click", () => {
+  closeHelpModal();
+});
+
+helpBackdrop.addEventListener("click", () => {
+  closeHelpModal();
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && !helpModal.hidden) {
+    closeHelpModal();
+  }
+});
+
 loadSampleBtn.addEventListener("click", async () => {
   await withButtonProcessing(
     loadSampleBtn,
@@ -473,7 +512,7 @@ loadSampleBtn.addEventListener("click", async () => {
       clearXpathSuggestions();
       resetFormatToggle();
       setParserErrors([]);
-      results.textContent = "Sample loaded.";
+      setResultsContent("Sample loaded.", false);
       setMeta("Sample XML loaded.", "ok");
     },
     "Loading..."
@@ -599,7 +638,7 @@ fileInput.addEventListener("change", () => {
     resetFormatToggle();
     setParserErrors([]);
     setMeta(`Loaded file: ${file.name}`, "ok");
-    results.textContent = "File loaded. Run Validate or XPath.";
+    setResultsContent("File loaded. Run Validate or XPath.", false);
   };
   reader.onerror = () => {
     setMeta("Could not read selected file.", "error");
@@ -655,7 +694,7 @@ async function loadPendingXml() {
   resetFormatToggle();
   setParserErrors([]);
   setMeta(`Loaded XML from tab: ${payload.source}`, "ok");
-  results.textContent = `Loaded ${payload.loadedAt}.`;
+  setResultsContent(`Loaded ${payload.loadedAt}.`, false);
 
   await chrome.storage.local.remove("pendingXmlPayload");
 }
@@ -669,3 +708,14 @@ syncLineNumberScroll();
 clearXpathSuggestions();
 resetFormatToggle();
 updateErrorNavigation();
+
+copyResultsBtn.addEventListener("click", async () => {
+  const output = results.textContent.trim();
+  if (!output) return;
+  try {
+    await navigator.clipboard.writeText(output);
+    setMeta("Results copied to clipboard.", "ok");
+  } catch (_error) {
+    setMeta("Could not copy results in this context.", "error");
+  }
+});
