@@ -93,6 +93,24 @@ const SAMPLE_XML = `<?xml version="1.0" encoding="UTF-8"?>
   </book>
 </catalog>`;
 
+const TIMESTAMP_FORMAT = {
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+  second: "2-digit",
+  hour12: false
+};
+
+function formatLocalTimestamp(value) {
+  const parsed = value ? new Date(value) : new Date();
+  if (Number.isNaN(parsed.getTime())) {
+    return value || "Unknown time";
+  }
+  return parsed.toLocaleString(undefined, TIMESTAMP_FORMAT);
+}
+
 function setMeta(message, kind = "") {
   meta.textContent = message;
   meta.className = `meta ${kind}`.trim();
@@ -922,7 +940,7 @@ function refreshRecentSelect() {
   for (const item of recentItems) {
     const option = document.createElement("option");
     option.value = item.id;
-    option.textContent = `${item.name} • ${new Date(item.loadedAt).toLocaleString()}`;
+    option.textContent = `${item.name} • ${formatLocalTimestamp(item.loadedAt)}`;
     recentSelect.appendChild(option);
   }
 }
@@ -953,7 +971,7 @@ async function loadXmlFromActiveTabInPlace() {
   setXmlContent(response.xml);
   await addRecentXmlItem("Active tab XML", response.xml, response.url || "tab");
   setMeta(`Loaded XML from active tab: ${response.url || "unknown"}`, "ok");
-  setResultsContent(`Loaded ${new Date().toISOString()}.`, false);
+  setResultsContent(`Loaded ${formatLocalTimestamp()}.`, false);
 }
 
 function runBasicXsdValidation() {
@@ -1438,7 +1456,7 @@ async function loadPendingXml() {
     setXmlContent(store.pendingXmlPayload.xml);
     await addRecentXmlItem("Tab XML", store.pendingXmlPayload.xml, store.pendingXmlPayload.source || "tab");
     setMeta(`Loaded XML from tab: ${store.pendingXmlPayload.source}`, "ok");
-    setResultsContent(`Loaded ${store.pendingXmlPayload.loadedAt}.`, false);
+    setResultsContent(`Loaded ${formatLocalTimestamp(store.pendingXmlPayload.loadedAt)}.`, false);
     await chrome.storage.local.remove("pendingXmlPayload");
   }
 }

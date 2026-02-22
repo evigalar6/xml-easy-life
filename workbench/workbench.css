@@ -187,9 +187,23 @@ h2 {
 }
 
 .select-wrap {
+  position: relative;
   margin: 0;
   min-width: 260px;
   flex: 1;
+}
+
+.select-wrap::after {
+  content: "";
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid color-mix(in srgb, var(--text) 72%, transparent);
+  border-bottom: 2px solid color-mix(in srgb, var(--text) 72%, transparent);
+  transform: translateY(-60%) rotate(45deg);
+  pointer-events: none;
 }
 
 .select-wrap select {
@@ -198,10 +212,12 @@ h2 {
   min-width: 0;
   border-radius: 12px;
   border: 1px solid var(--outline);
-  padding: 0 12px;
+  padding: 0 38px 0 12px;
   background: color-mix(in srgb, var(--surface) 88%, #ffffff);
   color: var(--text);
   font: inherit;
+  appearance: none;
+  -webkit-appearance: none;
 }
 
 .file-input {
